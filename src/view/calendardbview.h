@@ -66,6 +66,9 @@ private slots:
     /** Triggered when a calendar broadcasts newly ongoing events. */
     void processNewOngoingAptEvents(Calendar* cal, const QLinkedList<Appointment>& list);
 
+    /** Triggered when a calendar broadcasts new reminders. */
+    void processReminders(Calendar* cal, const QLinkedList<Appointment>& list);
+
     /** If a calendar broadcasts an exception, this function handles it.
       * We've used this system as opposed to C++ exception handling because
       * this form of exception handling can easily be implemented asynchronously. */

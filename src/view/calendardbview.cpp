@@ -75,10 +75,11 @@ void CalendarDBView::registerNewCalendar(Calendar* cal)
 {
     connect(cal, SIGNAL(nameChanged(Calendar*)), this, SLOT(processCalendarNameChange(Calendar*)));
     connect(cal, SIGNAL(newOngoingAppointments(Calendar*,QLinkedList<Appointment>)), this, SLOT(processNewOngoingAptEvents(Calendar*,QLinkedList<Appointment>)));
+    connect(cal, SIGNAL(newReminders(Calendar*,QLinkedList<Appointment>)), this, SLOT(processReminders(Calendar*,QLinkedList<Appointment>)));
     connect(cal, SIGNAL(calendarExceptionThrown(Calendar*,Calendar::ExceptionType)), this, SLOT(handleCalendarException(Calendar*,Calendar::ExceptionType)));
 
     // Create new widget item. The list widget takes ownership, so no need to delete.
-    QListWidgetItem* newItem = new QListWidgetItem(QIcon(cal->pixmap().scaledToHeight(_calList.height())), cal->name());
+    QListWidgetItem* newItem = new QListWidgetItem(QIcon(QPixmap::fromImage(cal->image()).scaledToHeight(_calList.height())), cal->name());
     _calList.addItem(newItem);
     _calItems[cal] = newItem;
 }
@@ -93,6 +94,11 @@ void CalendarDBView::processCalendarNameChange(Calendar* cal)
 void CalendarDBView::processNewOngoingAptEvents(Calendar *cal, const QLinkedList<Appointment> &list)
 {
     createNotification(cal, "Ongoing appointments", list);
+}
+
+void CalendarDBView::processReminders(Calendar *cal, const QLinkedList<Appointment>& list)
+{
+    createNotification(cal, "Coming up", list);
 }
 
 void CalendarDBView::handleCalendarException(Calendar *cal, Calendar::ExceptionType type)

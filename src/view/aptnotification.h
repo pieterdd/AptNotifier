@@ -46,8 +46,10 @@ private:
     QLabel _lblNfyTitle;
     QPushButton _btnNfyClose;
     QHBoxLayout _bodyLayout;
-    QLabel* _lblAptStart;
-    QLabel* _lblAptTitle;
+    QVBoxLayout _bodyLeftLayout;
+    QLabel _lblCalImage;
+    QLabel _lblAptStart;
+    QLabel _lblAptTitle;
 
     /** Notification cycle timer */
     QTimer _nfyTimer;

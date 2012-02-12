@@ -1,10 +1,11 @@
 #include "aptnotification.h"
 
+#include "model/calendar.h"
 #include <QVBoxLayout>
 #include <QApplication>
 #include <QDesktopWidget>
 
-const int AptNotification::WIDTH = 250;
+const int AptNotification::WIDTH = 300;
 const int AptNotification::HEIGHT = 100;
 const int AptNotification::BORDERSPACING = 10;
 
@@ -13,9 +14,6 @@ AptNotification::AptNotification(Calendar *cal, const QString &title, const QLin
     _cal = cal;
     _lblNfyTitle.setText(title);
     _aptList = aptList;
-
-    _lblAptStart = new QLabel(this);
-    _lblAptTitle = new QLabel(this);
 
     setStackPosition(stackPos);
     setupGUI();
@@ -30,8 +28,6 @@ AptNotification::AptNotification(Calendar *cal, const QString &title, const QLin
 
 AptNotification::~AptNotification()
 {
-    delete _lblAptStart;
-    delete _lblAptTitle;
 }
 
 void AptNotification::setStackPosition(unsigned stackPos)
@@ -49,22 +45,29 @@ void AptNotification::setupGUI()
     setContentsMargins(0, 0, 0, 0);
     setLayout(&_mainLayout);
 
-    // Top frame
+    // Main > Top
     _frmTop.setStyleSheet("background-color: #ccc");
     _frmTop.setFrameShadow(QFrame::Raised);
+    _lblCalImage.setPixmap(QPixmap::fromImage(_cal->image()).scaledToHeight(16));
     _btnNfyClose.setText("X");
     _btnNfyClose.setFixedSize(20, 20);
     QHBoxLayout* frameLayout = new QHBoxLayout();
-    frameLayout->addWidget(&_lblNfyTitle);
+    frameLayout->addWidget(&_lblCalImage);
+    frameLayout->addWidget(&_lblNfyTitle, 1);
     frameLayout->addWidget(&_btnNfyClose);
     _frmTop.setLayout(frameLayout);
 
-    // Body section
-    _bodyLayout.setContentsMargins(10, 0, 10, 0);
-    _bodyLayout.addWidget(_lblAptStart);
-    _bodyLayout.addWidget(_lblAptTitle);
+    // Main > Body > Left
+    _bodyLeftLayout.setContentsMargins(0, 0, 0, 0);
+    _bodyLeftLayout.addWidget(&_lblAptStart);
 
-    // Finalize layout
+    // Main > Body
+    _bodyLayout.setContentsMargins(10, 10, 10, 10);
+    _bodyLayout.addLayout(&_bodyLeftLayout);
+    _lblAptTitle.setStyleSheet("font-weight: bold");
+    _bodyLayout.addWidget(&_lblAptTitle, 1);
+
+    // Main layout
     _mainLayout.setContentsMargins(0, 0, 0, 0);
     _mainLayout.addWidget(&_frmTop, 0);
     _mainLayout.addLayout(&_bodyLayout, 1);
@@ -81,8 +84,8 @@ void AptNotification::nextAppointment()
     if (_nextAptIt != _aptList.end()) {
         const Appointment& apt = *_nextAptIt;
         QString start = Appointment::composeShortDateTime(apt.start());
-        _lblAptStart->setText(start);
-        _lblAptTitle->setText(apt.summary());
+        _lblAptStart.setText(start);
+        _lblAptTitle.setText(apt.summary());
         ++_nextAptIt;
         _nfyTimer.start();
     }

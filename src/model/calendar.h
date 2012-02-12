@@ -11,10 +11,10 @@
 #include <QUrl>
 #include <QColor>
 #include <QTimer>
+#include <QImage>
 #include <QMutex>
 #include <QString>
 #include <QObject>
-#include <QPixmap>
 #include <QDateTime>
 #include <QMultiMap>
 #include <QLinkedList>
@@ -36,7 +36,7 @@ public:
     QString url() const { return (QString)_url.toEncoded(); }
     const QString& name() const { return _name; }
     const QColor& color() const { return _color; }
-    const QPixmap& pixmap() const { return _pixmap; }
+    const QImage& image() const { return _image; }
     static short getTimeShift() { return Calendar::timeShift; }
 
     /**
@@ -47,15 +47,21 @@ public:
       */
     enum ExceptionType { InvalidFormat };
 private slots:
-    /** Parses a calendar file to extract all appointments */
+    /** Parses a calendar file to extract all appointments. */
     void buildCalendar(QNetworkReply*);
 
     /** On regular intervals, this function is called to trigger notifications
-      * about ongoing appointments and reminders */
+      * about ongoing appointments and reminders. */
     void prepareNotifications();
+    void prepareNotifications_Ongoing();
+    void prepareNotifications_Reminders();
 private:
     /** Creates the pixmap for this calendar based on the color. */
-    void buildCalendarPixmap();
+    void buildCalendarImage();
+
+    /** Determines the reminder timestamp of an appointment based on the appointment
+      * time and the "TRIGGER" field. */
+    QDateTime determineReminderStamp(const QDateTime& aptStart, const QString& triggerInfo);
 
     /** Calculates the user's time zone shift compared to UTC.
       * \todo This will likely cause a bug when used in Newfoundland or other places
@@ -65,17 +71,21 @@ private:
     QUrl _url;
     QString _name;
     QColor _color;
-    QPixmap _pixmap;
+    QImage _image;
     QTimer _nfyTimer;
     QNetworkAccessManager _naMgr;
 
     /** Contains all appointments that aren't ongoing. Sorted on start time. */
     QMultiMap<QDateTime, Appointment> _appointments;
 
+    /** Contains all non-expired reminders with their requested alarm time. */
+    QMultiMap<QDateTime, Appointment> _reminders;
+
     /** Contains all ongoing appointments. */
     QLinkedList<Appointment> _ongoingApts;
 
     static short timeShift;
+    static const short IMAGEDIM;
 signals:
     /** Broadcast for calendar exceptions. We picked this over C++
       * exception throwing because it works asynchronously as well. */
@@ -85,7 +95,10 @@ signals:
     void nameChanged(Calendar*);
 
     /** Broadcasts new ongoing appointments at semi-regular intervals. */
-    void newOngoingAppointments(Calendar*, const QLinkedList<Appointment>& list);
+    void newOngoingAppointments(Calendar*, const QLinkedList<Appointment>&);
+
+    /** Broadcasts reminders at semi-regular intervals. */
+    void newReminders(Calendar*, const QLinkedList<Appointment>&);
 };
 
 #endif // CALENDAR_H

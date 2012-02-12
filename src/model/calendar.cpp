@@ -1,6 +1,7 @@
 #include "calendar.h"
 
 #include "appointment.h"
+#include <cmath>
 #include <QFile>
 #include <cassert>
 #include <QMessageBox>
@@ -8,6 +9,7 @@
 #include <QNetworkRequest>
 
 short Calendar::timeShift = Calendar::calcTimeShift();
+const short Calendar::IMAGEDIM = 64;
 
 Calendar::Calendar(const QString &url, const QColor &color)
     : _naMgr(this)
@@ -16,7 +18,7 @@ Calendar::Calendar(const QString &url, const QColor &color)
     _url = QUrl::fromEncoded(qbaUrl.append(url));
     _name = "Untitled Calendar";
     _color = color;
-    buildCalendarPixmap();
+    buildCalendarImage();
 
     // Wire timers
     connect(&_nfyTimer, SIGNAL(timeout()), this, SLOT(prepareNotifications()));
@@ -30,6 +32,17 @@ Calendar::~Calendar() {
 }
 
 void Calendar::prepareNotifications()
+{
+    // First get the ongoing appointment notifications out the door,
+    // then process the reminders.
+    prepareNotifications_Ongoing();
+    prepareNotifications_Reminders();
+
+    // Check notifications again in half a minute
+    QTimer::singleShot(30000, this, SLOT(prepareNotifications()));
+}
+
+void Calendar::prepareNotifications_Ongoing()
 {
     QDateTime now = QDateTime::currentDateTime();
     now = now.addSecs(-now.time().second());
@@ -67,22 +80,78 @@ void Calendar::prepareNotifications()
         }
     } while (it != _appointments.end() && !foundAllNewlyOngoing);
 
-    // Broadcast new ongoing appointments to observers and schedule a new update
+    // Broadcast new ongoing appointments to observers
     if (newOngoing.size() > 0)
         emit newOngoingAppointments(this, newOngoing);
-    QTimer::singleShot(30000, this, SLOT(prepareNotifications()));
 }
 
-void Calendar::buildCalendarPixmap()
+void Calendar::prepareNotifications_Reminders()
 {
-    // TODO: make it pretty
-    _pixmap = QPixmap(64, 64);
-    _pixmap.fill(_color);
+    QDateTime now = QDateTime::currentDateTime();
+    now = now.addSecs(-now.time().second());
+
+    // Get the list of reminders that are dated at this minute and
+    // erase them from reminder storage
+    QLinkedList<Appointment> reminders;
+    for (QMap<QDateTime, Appointment>::iterator it = _reminders.find(now);
+         it != _reminders.end(); ++it) {
+        reminders.push_back(*it);
+        it = _reminders.erase(it);
+    }
+
+    // Broadcast new reminders to observers
+    if (reminders.count() > 0)
+        emit newReminders(this, reminders);
+}
+
+void Calendar::buildCalendarImage()
+{
+    // TODO: in the future, we'll probably switch to a fairly neutral
+    // calendar image and colorize it.
+    _image = QImage(IMAGEDIM, IMAGEDIM, QImage::Format_RGB32);
+    _image.fill(_color.rgb());
+
+    for (unsigned row = 0; row < (unsigned)IMAGEDIM; ++row) {
+        QRgb* curline = (QRgb*)_image.scanLine(row);
+
+        for (unsigned col = 0; col < (unsigned)IMAGEDIM; ++col) {
+            QColor newColor = _color;
+            newColor.setRed(std::min(newColor.red() + ((double)(IMAGEDIM - row)/IMAGEDIM)*75, (double)255));
+            newColor.setGreen(std::min(newColor.green() + ((double)(IMAGEDIM - row)/IMAGEDIM)*75, (double)255));
+            newColor.setBlue(std::min(newColor.blue() + ((double)(IMAGEDIM - row)/IMAGEDIM)*75, (double)255));
+
+            curline[col] = newColor.rgb();
+        }
+    }
+}
+
+QDateTime Calendar::determineReminderStamp(const QDateTime &aptStart, const QString &triggerInfo)
+{
+    QDateTime reminderStamp = aptStart;
+    int dayPos = triggerInfo.indexOf("D");
+    int hourPos = triggerInfo.indexOf("H");
+    int minPos = triggerInfo.indexOf("M");
+    int nextReadPos = 0;
+
+    // Extract offsets from the string and apply them to the timestamp
+    if (dayPos != -1) {
+        reminderStamp = reminderStamp.addDays(-triggerInfo.left(dayPos).toInt());
+        nextReadPos = dayPos + 1;
+    } if (hourPos != -1) {
+        reminderStamp = reminderStamp.addSecs(-3600*triggerInfo.mid(nextReadPos, hourPos - nextReadPos).toInt());
+        nextReadPos = hourPos + 1;
+    } if (minPos != -1) {
+        reminderStamp = reminderStamp.addSecs(-60*triggerInfo.mid(nextReadPos, minPos - nextReadPos).toInt());
+        nextReadPos = minPos + 1;
+    }
+
+    return reminderStamp;
 }
 
 void Calendar::buildCalendar(QNetworkReply* reply)
 {
     QString rawData = reply->readAll();
+    QDateTime now = QDateTime::currentDateTime();
 
     // If we don't have the ICS header, this is not a valid calendar
     if (rawData.indexOf("BEGIN:VCALENDAR") != 0) {
@@ -110,10 +179,28 @@ void Calendar::buildCalendar(QNetworkReply* reply)
         if (beginPos == -1 || endPos == -1 || beginPos > endPos) {
             eventsLeft = false;
         } else {
-            // Create the new appointment
-            Appointment newApt(rawData.mid(beginPos, endPos - beginPos));
-            if (newApt.isValid())
+            QString calInfo = rawData.mid(beginPos, endPos - beginPos);
+
+            // Add the newly extracted appointment if it hasn't already ended
+            Appointment newApt(calInfo);
+            if (newApt.isValid() && now < newApt.end())
                 _appointments.insert(newApt.start(), newApt);
+
+            // Create reminders where needed
+            int triggerPos = calInfo.indexOf("TRIGGER:-P");
+            while (triggerPos != -1) {
+                QString triggerInfo = calInfo.mid(triggerPos + 10);
+                triggerInfo = triggerInfo.left(triggerInfo.indexOf("\r\n"));
+
+                // Only add reminder times that haven't passed yet
+                // TODO: not all reminders register correctly
+                QDateTime reminderStamp = determineReminderStamp(newApt.start(), triggerInfo);
+                if (now < reminderStamp)
+                    _reminders.insert(reminderStamp, newApt);
+
+                calInfo = calInfo.mid(triggerPos + 10);
+                triggerPos = calInfo.indexOf("TRIGGER:-P");
+            }
 
             // Prepare for next appointment
             rawData = rawData.mid(endPos + 10);
