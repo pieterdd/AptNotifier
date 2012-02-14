@@ -16,7 +16,6 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QtGui/QMainWindow>
-class Calendar;
 class CalendarDB;
 class AptNotification;
 class QListWidgetItem;
@@ -48,6 +47,7 @@ private:
     QPushButton _btnRemove;
     QListWidget _calList;
     QMap<Calendar*, QListWidgetItem*> _calItems;
+    QMap<QListWidgetItem*, Calendar*> _widItems;
 
     // Notification-related data
     QMutex _nfyStackLock;
@@ -58,10 +58,13 @@ private slots:
     void showNewCalendarDialog();
 
     /** Updates view to reflect successfully added calendar. */
-    void registerNewCalendar(Calendar* cal);
+    void registerCalendar(Calendar* cal);
 
     /** Updates view when the name of a calendar changes. */
     void processCalendarNameChange(Calendar*);
+
+    /** Updates view when a calendar is removed. */
+    void unregisterCalendar(Calendar* cal);
 
     /** Triggered when a calendar broadcasts newly ongoing events. */
     void processNewOngoingAptEvents(Calendar* cal, const QLinkedList<Appointment>& list);

@@ -15,6 +15,7 @@
 #include <QMutex>
 #include <QString>
 #include <QObject>
+#include <QMetaType>
 #include <QDateTime>
 #include <QMultiMap>
 #include <QLinkedList>
@@ -100,5 +101,7 @@ signals:
     /** Broadcasts reminders at semi-regular intervals. */
     void newReminders(Calendar*, const QLinkedList<Appointment>&);
 };
+
+Q_DECLARE_METATYPE(Calendar*)
 
 #endif // CALENDAR_H

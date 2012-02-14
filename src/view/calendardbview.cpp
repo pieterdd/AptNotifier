@@ -37,10 +37,12 @@ CalendarDBView::~CalendarDBView()
 
 void CalendarDBView::setupGUI()
 {
-    connect(_calDB, SIGNAL(newCalendarAdded(Calendar*)), this, SLOT(registerNewCalendar(Calendar*)));
+    connect(_calDB, SIGNAL(newCalendarAdded(Calendar*)), this, SLOT(registerCalendar(Calendar*)));
+    connect(_calDB, SIGNAL(removingCalendar(Calendar*)), this, SLOT(unregisterCalendar(Calendar*)));
 
     // Set up button group
     connect(&_btnAdd, SIGNAL(clicked()), this, SLOT(showNewCalendarDialog()));
+    connect(&_btnRemove, SIGNAL(clicked()), this, SLOT(removeSelectedCalendars()));
     _btnAdd.setText("Add");
     _btnRemove.setEnabled(false);
     _btnRemove.setText("Remove");
@@ -71,7 +73,7 @@ void CalendarDBView::createNotification(Calendar* cal, const QString &title, con
     aptNfy->show();
 }
 
-void CalendarDBView::registerNewCalendar(Calendar* cal)
+void CalendarDBView::registerCalendar(Calendar* cal)
 {
     connect(cal, SIGNAL(nameChanged(Calendar*)), this, SLOT(processCalendarNameChange(Calendar*)));
     connect(cal, SIGNAL(newOngoingAppointments(Calendar*,QLinkedList<Appointment>)), this, SLOT(processNewOngoingAptEvents(Calendar*,QLinkedList<Appointment>)));
@@ -82,6 +84,7 @@ void CalendarDBView::registerNewCalendar(Calendar* cal)
     QListWidgetItem* newItem = new QListWidgetItem(QIcon(QPixmap::fromImage(cal->image()).scaledToHeight(_calList.height())), cal->name());
     _calList.addItem(newItem);
     _calItems[cal] = newItem;
+    _widItems[newItem] = cal;
 }
 
 void CalendarDBView::processCalendarNameChange(Calendar* cal)
@@ -89,6 +92,24 @@ void CalendarDBView::processCalendarNameChange(Calendar* cal)
     QMap<Calendar*, QListWidgetItem*>::iterator it = _calItems.find(cal);
     assert(it != _calItems.end());
     it.value()->setText(cal->name());
+}
+
+void CalendarDBView::unregisterCalendar(Calendar* cal)
+{
+    // Search for the associated QListWidgetItem and associated iterators
+    QMap<Calendar*, QListWidgetItem*>::iterator calIt = _calItems.find(cal);
+    assert(calIt != _calItems.end());
+    QListWidgetItem* widgetItem = *calIt;
+    QMap<QListWidgetItem*, Calendar*>::iterator widIt = _widItems.find(widgetItem);
+    assert(widIt != _widItems.end());
+
+    // Remove it from the list widget
+    _calList.removeItemWidget(widgetItem);
+    delete widgetItem;      // TODO: should we do this? Check ownership in Qt docs.
+
+    // Remove the calendar from the Calendar/QListWidgetItem dictionaries
+    _calItems.erase(calIt);
+    _widItems.erase(widIt);
 }
 
 void CalendarDBView::processNewOngoingAptEvents(Calendar *cal, const QLinkedList<Appointment> &list)
@@ -170,5 +191,14 @@ void CalendarDBView::updateBtnRemoveState()
 
 void CalendarDBView::removeSelectedCalendars()
 {
-    // TODO: implement
+    QList<QListWidgetItem*> select = _calList.selectedItems();
+
+    // Issue a delete request for all selected items
+    for (QList<QListWidgetItem*>::iterator it = select.begin(); it != select.end(); ++it) {
+        QListWidgetItem* widgetItem = *it;
+
+        assert(_widItems.contains(widgetItem));
+        Calendar* cal = _widItems[widgetItem];
+        _calDB->removeCalendar(cal);
+    }
 }

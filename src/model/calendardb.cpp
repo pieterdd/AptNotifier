@@ -48,6 +48,7 @@ void CalendarDB::removeCalendar(Calendar *cal)
          it != _calendars.end(); ++it) {
         if (*it == cal) {
             _calendars.erase(it);
+            emit removingCalendar(cal);
             delete cal;
             return;
         }

@@ -39,6 +39,9 @@ signals:
     /** Informs observers of a successfully added calendar */
     void newCalendarAdded(Calendar*);
 
+    /** Warns observers that a calendar will be deleted */
+    void removingCalendar(Calendar*);
+
     /** Broadcast when an invalid format is detected on a calendar. */
     void invalidFormatDetected(Calendar*);
 };
