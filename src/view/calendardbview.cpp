@@ -156,25 +156,27 @@ void CalendarDBView::notificationClosed(AptNotification* aptNfy)
 
     // Reorder the notification stack accordingly
     _nfyStackLock.lock();
-    for (QMap<int, AptNotification*>::iterator it = _nfyStack.begin();
-         it != _nfyStack.end(); ++it) {
+    QMap<int, AptNotification*>::iterator it = _nfyStack.begin();
+
+    while (it != _nfyStack.end()) {
         AptNotification* curNfy = it.value();
 
         // Found notification window?
         if (curNfy == aptNfy) {
             passedNfy = true;
             aptNfy->deleteLater();
+            lastKey = it.key();
             it = _nfyStack.erase(it);
         }
         // All subsequent windows need to be moved to the front
         else if (passedNfy) {
             assert(!_nfyStack.contains(lastKey));
             _nfyStack[lastKey] = curNfy;
+            lastKey = it.key();
             it = _nfyStack.erase(it);
             curNfy->setStackPosition(lastKey);
-        }
-
-        lastKey = it.key();
+        } else
+            ++it;
     }
     _nfyStackLock.unlock();
 }

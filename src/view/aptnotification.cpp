@@ -16,6 +16,7 @@ AptNotification::AptNotification(Calendar *cal, const QString &title, const QLin
     _aptList = aptList;
 
     setStackPosition(stackPos);
+    setFixedSize(WIDTH, HEIGHT);
     setupGUI();
 
     // Activate notification cycling
@@ -33,8 +34,9 @@ AptNotification::~AptNotification()
 void AptNotification::setStackPosition(unsigned stackPos)
 {
     QDesktopWidget* qdw = QApplication::desktop();
-    setGeometry(qdw->screen()->width() - (WIDTH - BORDERSPACING)*(stackPos + 1),
-                qdw->screen()->height() - (HEIGHT - BORDERSPACING)*(stackPos + 1),
+
+    setGeometry(qdw->screen()->width() - WIDTH,
+                qdw->screen()->height() - (HEIGHT + BORDERSPACING)*(stackPos + 1),
                 WIDTH, HEIGHT);
 }
 
