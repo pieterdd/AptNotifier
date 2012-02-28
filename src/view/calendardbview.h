@@ -10,11 +10,13 @@
 #include "model/calendar.h"
 #include "model/appointment.h"
 #include <QMap>
+#include <QMenu>
 #include <QMutex>
 #include <QListWidget>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QSystemTrayIcon>
 #include <QtGui/QMainWindow>
 class CalendarDB;
 class AptNotification;
@@ -48,6 +50,8 @@ private:
     QListWidget _calList;
     QMap<Calendar*, QListWidgetItem*> _calItems;
     QMap<QListWidgetItem*, Calendar*> _widItems;
+    QSystemTrayIcon _trayIcon;
+    QMenu _trayMenu;
 
     // Notification-related data
     QMutex _nfyStackLock;

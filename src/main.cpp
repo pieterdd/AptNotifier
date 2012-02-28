@@ -12,7 +12,7 @@ int main(int argc, char *argv[])
 
     CalendarDB calDB;
     CalendarDBView calDBView(&calDB);
-    calDBView.show();
+    calDBView.hide();
     
     return a.exec();
 }

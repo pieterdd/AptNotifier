@@ -8,3 +8,8 @@ License
 =======
 
 This application and its source code is provided to you for free under a [Creative Commons BY-NC 2.0 license](http://creativecommons.org/licenses/by-nc/2.0/be/deed.en). The work is provided to you as-is. I cannot be held responsible for any damages you may incur following your use of the work.
+
+Acknowledgements
+================
+
+[Gnome Project](http://www.iconfinder.com/icondetails/55237/48/48_appointment_gnome_soon_icon) for the system tray icon

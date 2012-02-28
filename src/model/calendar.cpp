@@ -222,6 +222,8 @@ short Calendar::calcTimeShift() {
         return -(utc.time().hour() + (24 - local.time().hour()));
     else if (utc.date() < local.date())
         return local.time().hour() + (24 - utc.time().hour());
-    else
+    else {
         abort();
+        return 0;
+    }
 }

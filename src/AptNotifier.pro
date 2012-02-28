@@ -25,3 +25,6 @@ HEADERS  += \
     view/calendardbview.h \
     view/aptnotification.h \
     view/inputbox.h
+
+RESOURCES += \
+    resources.qrc

@@ -18,7 +18,9 @@ CalendarDBView::CalendarDBView(CalendarDB *calDB, QWidget *parent)
     setupGUI();
 
     // Load the calendar list from a file
+    _trayIcon.showMessage("AptNotifier", "Your calendars are being loaded...", QSystemTrayIcon::Information, 3000);
     _calDB->loadCalendars();
+    _trayIcon.showMessage("AptNotifier", "Your calendars are loaded!", QSystemTrayIcon::Information, 1000);
 }
 
 CalendarDBView::~CalendarDBView()
@@ -55,6 +57,15 @@ void CalendarDBView::setupGUI()
     _mainLayout.addLayout(&_buttonContainer);
     _centralWidget.setLayout(&_mainLayout);
     setCentralWidget(&_centralWidget);
+
+    // Tray icon
+    _trayIcon.setIcon(QIcon(":/general/appointment.png"));
+    _trayIcon.show();
+    QAction* showWindow = _trayMenu.addAction("Show window");
+    QAction* quitAct = _trayMenu.addAction("Quit");
+    connect(showWindow, SIGNAL(triggered()), this, SLOT(show()));
+    connect(quitAct, SIGNAL(triggered()), this, SLOT(close()));
+    _trayIcon.setContextMenu(&_trayMenu);
 }
 
 void CalendarDBView::createNotification(Calendar* cal, const QString &title, const QLinkedList<Appointment> &list)
@@ -105,7 +116,7 @@ void CalendarDBView::unregisterCalendar(Calendar* cal)
 
     // Remove it from the list widget
     _calList.removeItemWidget(widgetItem);
-    delete widgetItem;      // TODO: should we do this? Check ownership in Qt docs.
+    delete widgetItem;      // Deletion needed because _calList lost ownership
 
     // Remove the calendar from the Calendar/QListWidgetItem dictionaries
     _calItems.erase(calIt);
