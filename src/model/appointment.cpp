@@ -10,16 +10,12 @@ Appointment::Appointment(const QString& input)
     parseStart(rawData);
     parseEnd(rawData);
     parseSummary(rawData);
-
-    // Update appointment validity
-    _valid = (_start.isValid() && _end.isValid());
 }
 
 Appointment::Appointment(const Appointment& other) {
     _start = other._start;
     _end = other._end;
     _summary = other._summary;
-    _valid = other._valid;
 }
 
 QString Appointment::composeShortDateTime(const QDateTime &dateTime)
@@ -40,9 +36,9 @@ QString Appointment::composeShortDateTime(const QDateTime &dateTime)
 void Appointment::parseStart(const QString &rawData)
 {
     // Check if a start date has been given
-    int beginPos = rawData.indexOf("DTSTART:") + 8;
-    QString trimmedData = rawData.mid(beginPos);
-    if (beginPos == -1)
+    int dtstartPos = rawData.indexOf("DTSTART:");
+    QString trimmedData = rawData.mid(dtstartPos + 8);
+    if (dtstartPos == -1)
         return;
 
     // Parse the date
@@ -52,9 +48,9 @@ void Appointment::parseStart(const QString &rawData)
 void Appointment::parseEnd(const QString &rawData)
 {
     // Check if an end date has been given
-    int beginPos = rawData.indexOf("DTEND:");
-    QString trimmedData = rawData.mid(beginPos + 6);
-    if (beginPos == -1)
+    int dtendPos = rawData.indexOf("DTEND:");
+    QString trimmedData = rawData.mid(dtendPos + 6);
+    if (dtendPos == -1)
         return;
 
     // Parse the date

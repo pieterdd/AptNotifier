@@ -17,7 +17,7 @@ public:
     Appointment(const QString& rawData);
     Appointment(const Appointment& other);
 
-    bool isValid() const { return _valid; }
+    bool isValid() const { return _start.isValid() && _end.isValid(); }
 
     const QDateTime& start() const { return _start; }
     const QDateTime& end() const { return _end; }
@@ -35,8 +35,6 @@ private:
     QDateTime _start;
     QDateTime _end;
     QString _summary;
-
-    bool _valid;
 };
 
 #endif // APPOINTMENT_H

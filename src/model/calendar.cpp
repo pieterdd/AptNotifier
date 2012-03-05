@@ -3,6 +3,7 @@
 #include "appointment.h"
 #include <cmath>
 #include <QFile>
+#include <QDebug>
 #include <cassert>
 #include <QMessageBox>
 #include <QNetworkReply>
@@ -128,21 +129,24 @@ void Calendar::buildCalendarImage()
 QDateTime Calendar::determineReminderStamp(const QDateTime &aptStart, const QString &triggerInfo)
 {
     QDateTime reminderStamp = aptStart;
-    int dayPos = triggerInfo.indexOf("D");
-    int hourPos = triggerInfo.indexOf("H");
-    int minPos = triggerInfo.indexOf("M");
-    int nextReadPos = 0;
+    QString triggerTmp = triggerInfo;
 
     // Extract offsets from the string and apply them to the timestamp
+    int dayPos = triggerTmp.indexOf("D");
     if (dayPos != -1) {
-        reminderStamp = reminderStamp.addDays(-triggerInfo.left(dayPos).toInt());
-        nextReadPos = dayPos + 1;
-    } if (hourPos != -1) {
-        reminderStamp = reminderStamp.addSecs(-3600*triggerInfo.mid(nextReadPos, hourPos - nextReadPos).toInt());
-        nextReadPos = hourPos + 1;
-    } if (minPos != -1) {
-        reminderStamp = reminderStamp.addSecs(-60*triggerInfo.mid(nextReadPos, minPos - nextReadPos).toInt());
-        nextReadPos = minPos + 1;
+        reminderStamp = reminderStamp.addDays(-triggerTmp.left(dayPos).toInt());
+        triggerTmp = triggerTmp.mid(triggerTmp.indexOf(QRegExp("[0-9]"), dayPos));
+    }
+
+    int hourPos = triggerTmp.indexOf("H");
+    if (hourPos != -1) {
+        reminderStamp = reminderStamp.addSecs(-3600*triggerTmp.mid(0, hourPos).toInt());
+        triggerTmp = triggerTmp.mid(triggerTmp.indexOf(QRegExp("[0-9]"), hourPos));
+    }
+
+    int minPos = triggerTmp.indexOf("M");
+    if (minPos != -1) {
+        reminderStamp = reminderStamp.addSecs(-60*triggerTmp.mid(0, minPos).toInt());
     }
 
     return reminderStamp;
@@ -183,23 +187,25 @@ void Calendar::buildCalendar(QNetworkReply* reply)
 
             // Add the newly extracted appointment if it hasn't already ended
             Appointment newApt(calInfo);
-            if (newApt.isValid() && now < newApt.end())
+            if (newApt.isValid() && now < newApt.end()) {
                 _appointments.insert(newApt.start(), newApt);
 
-            // Create reminders where needed
-            int triggerPos = calInfo.indexOf("TRIGGER:-P");
-            while (triggerPos != -1) {
-                QString triggerInfo = calInfo.mid(triggerPos + 10);
-                triggerInfo = triggerInfo.left(triggerInfo.indexOf("\r\n"));
+                // Create reminders where needed
+                int triggerPos = calInfo.indexOf("TRIGGER:-P");
+                while (triggerPos != -1) {
+                    QString triggerInfo = calInfo.mid(triggerPos + 10);
+                    triggerInfo = triggerInfo.left(triggerInfo.indexOf("\r\n"));
 
-                // Only add reminder times that haven't passed yet
-                // TODO: not all reminders register correctly
-                QDateTime reminderStamp = determineReminderStamp(newApt.start(), triggerInfo);
-                if (now < reminderStamp)
-                    _reminders.insert(reminderStamp, newApt);
+                    // Only add reminder times that haven't passed yet
+                    // TODO: not all reminders register correctly
+                    QDateTime reminderStamp = determineReminderStamp(newApt.start(), triggerInfo);
+                    assert(reminderStamp.isValid());
+                    if (now < reminderStamp)
+                        _reminders.insert(reminderStamp, newApt);
 
-                calInfo = calInfo.mid(triggerPos + 10);
-                triggerPos = calInfo.indexOf("TRIGGER:-P");
+                    calInfo = calInfo.mid(triggerPos + 10);
+                    triggerPos = calInfo.indexOf("TRIGGER:-P");
+                }
             }
 
             // Prepare for next appointment
