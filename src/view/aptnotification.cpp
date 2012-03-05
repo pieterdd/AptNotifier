@@ -35,8 +35,10 @@ void AptNotification::setStackPosition(unsigned stackPos)
 {
     QDesktopWidget* qdw = QApplication::desktop();
 
-    setGeometry(qdw->screen()->width() - WIDTH,
-                qdw->screen()->height() - (HEIGHT + BORDERSPACING)*(stackPos + 1),
+    // Get the available screen real estate (minus taskbar) and
+    // position the window appropriately
+    setGeometry(qdw->availableGeometry().width() - WIDTH,
+                qdw->availableGeometry().height() - (HEIGHT)*(stackPos + 1),
                 WIDTH, HEIGHT);
 }
 

@@ -20,7 +20,7 @@ CalendarDBView::CalendarDBView(CalendarDB *calDB, QWidget *parent)
     // Load the calendar list from a file
     _trayIcon.showMessage("AptNotifier", "Your calendars are being loaded...", QSystemTrayIcon::Information, 3000);
     _calDB->loadCalendars();
-    _trayIcon.showMessage("AptNotifier", "Your calendars are loaded!", QSystemTrayIcon::Information, 1000);
+    _trayIcon.showMessage("AptNotifier", "Your calendars have been loaded!", QSystemTrayIcon::Information, 1000);
 }
 
 CalendarDBView::~CalendarDBView()
@@ -45,11 +45,14 @@ void CalendarDBView::setupGUI()
     // Set up button group
     connect(&_btnAdd, SIGNAL(clicked()), this, SLOT(showNewCalendarDialog()));
     connect(&_btnRemove, SIGNAL(clicked()), this, SLOT(removeSelectedCalendars()));
+    connect(&_btnHide, SIGNAL(clicked()), this, SLOT(hide()));
     _btnAdd.setText("Add");
     _btnRemove.setEnabled(false);
     _btnRemove.setText("Remove");
+    _btnHide.setText("Hide window");
     _buttonContainer.addWidget(&_btnAdd);
     _buttonContainer.addWidget(&_btnRemove);
+    _buttonContainer.addWidget(&_btnHide);
 
     // Set up main layout
     _mainLayout.addWidget(&_calList);

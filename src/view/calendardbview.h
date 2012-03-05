@@ -47,6 +47,7 @@ private:
     QHBoxLayout _buttonContainer;
     QPushButton _btnAdd;
     QPushButton _btnRemove;
+    QPushButton _btnHide;
     QListWidget _calList;
     QMap<Calendar*, QListWidgetItem*> _calItems;
     QMap<QListWidgetItem*, Calendar*> _widItems;
