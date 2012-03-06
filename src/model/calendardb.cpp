@@ -25,9 +25,13 @@ void CalendarDB::loadCalendars()
 
     // Read one URL per line
     while (!file.atEnd()) {
+        // Vary calendar colors by varying hue values
+        QColor calColor(0, 0, 0);
+        calColor.setHsv((_calendars.size() * 50) % 360, 255, 255);
+
         QString line = file.readLine();
         line = line.trimmed();
-        addCalendar(line, QColor(255, 0, 0), false); // TODO: vary colors
+        addCalendar(line, calColor, false);
     }
 }
 

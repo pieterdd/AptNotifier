@@ -41,6 +41,7 @@ void CalendarDBView::setupGUI()
 {
     connect(_calDB, SIGNAL(newCalendarAdded(Calendar*)), this, SLOT(registerCalendar(Calendar*)));
     connect(_calDB, SIGNAL(removingCalendar(Calendar*)), this, SLOT(unregisterCalendar(Calendar*)));
+    setWindowTitle("AptNotifier (" + QString(__DATE__) + ")");
 
     // Set up button group
     connect(&_btnAdd, SIGNAL(clicked()), this, SLOT(showNewCalendarDialog()));
@@ -63,6 +64,7 @@ void CalendarDBView::setupGUI()
 
     // Tray icon
     _trayIcon.setIcon(QIcon(":/general/appointment.png"));
+    _trayIcon.setToolTip("AptNotifier (" + QString(__DATE__) + ")");
     _trayIcon.show();
     QAction* showWindow = _trayMenu.addAction("Show window");
     QAction* quitAct = _trayMenu.addAction("Quit");

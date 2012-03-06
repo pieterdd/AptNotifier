@@ -45,7 +45,7 @@ void AptNotification::setStackPosition(unsigned stackPos)
 void AptNotification::setupGUI()
 {
     // TODO: add visual representation of cycle timer and calendar icon
-    connect(this, SIGNAL(finished(int)), this, SLOT(sendDialogCloseEvent()));
+    connect(this, SIGNAL(finished(int)), this, SLOT(sendNotificationFinished()));
     setContentsMargins(0, 0, 0, 0);
     setLayout(&_mainLayout);
 
@@ -77,7 +77,7 @@ void AptNotification::setupGUI()
     _mainLayout.addLayout(&_bodyLayout, 1);
 }
 
-void AptNotification::sendDialogCloseEvent()
+void AptNotification::sendNotificationFinished()
 {
     emit notificationClosed(this);
 }
@@ -95,6 +95,6 @@ void AptNotification::nextAppointment()
     }
     // If we're out of appointments, close the window.
     else {
-        close();
+        sendNotificationFinished();
     }
 }

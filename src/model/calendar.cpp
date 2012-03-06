@@ -61,7 +61,7 @@ void Calendar::prepareNotifications_Ongoing()
     // Collect newly ongoing appointments and transfer them to a separate list
     bool foundAllNewlyOngoing = false;
     QMultiMap<QDateTime, Appointment>::iterator it = _appointments.begin();
-    do {
+    while (it != _appointments.end() && !foundAllNewlyOngoing) {
         const Appointment& apt = it.value();
 
         // Stop searching if the selected appointment hasn't started yet
@@ -79,7 +79,7 @@ void Calendar::prepareNotifications_Ongoing()
         } else {
             ++it;
         }
-    } while (it != _appointments.end() && !foundAllNewlyOngoing);
+    }
 
     // Broadcast new ongoing appointments to observers
     if (newOngoing.size() > 0)
@@ -94,8 +94,10 @@ void Calendar::prepareNotifications_Reminders()
     // Get the list of reminders that are dated at this minute and
     // erase them from reminder storage
     QLinkedList<Appointment> reminders;
-    for (QMap<QDateTime, Appointment>::iterator it = _reminders.find(now);
-         it != _reminders.end(); ++it) {
+    QMap<QDateTime, Appointment>::iterator it = _reminders.find(now);
+
+    // TODO: find operation fails
+    while (it != _reminders.end() && it.key() == now) {
         reminders.push_back(*it);
         it = _reminders.erase(it);
     }
@@ -107,8 +109,8 @@ void Calendar::prepareNotifications_Reminders()
 
 void Calendar::buildCalendarImage()
 {
-    // TODO: in the future, we'll probably switch to a fairly neutral
-    // calendar image and colorize it.
+    // TODO: we'll probably transition to a fairly neutral
+    // calendar image and colorize it later.
     _image = QImage(IMAGEDIM, IMAGEDIM, QImage::Format_RGB32);
     _image.fill(_color.rgb());
 
@@ -200,7 +202,7 @@ void Calendar::buildCalendar(QNetworkReply* reply)
                     // TODO: not all reminders register correctly
                     QDateTime reminderStamp = determineReminderStamp(newApt.start(), triggerInfo);
                     assert(reminderStamp.isValid());
-                    if (now < reminderStamp)
+                    if (now <= reminderStamp)
                         _reminders.insert(reminderStamp, newApt);
 
                     calInfo = calInfo.mid(triggerPos + 10);

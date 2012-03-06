@@ -55,10 +55,10 @@ private:
     QTimer _nfyTimer;
     QLinkedList<Appointment>::iterator _nextAptIt;
 private slots:
-    /** Helper that lets us send a "dialog closed" signal with the
+    /** Helper that lets us send a "notification can be closed" signal with the
       * dialog instance attached to it.
       */
-    void sendDialogCloseEvent();
+    void sendNotificationFinished();
 
     /** Hops to the next appointment in the list. */
     void nextAppointment();
