@@ -90,13 +90,14 @@ void Calendar::prepareNotifications_Reminders()
 {
     QDateTime now = QDateTime::currentDateTime();
     now = now.addSecs(-now.time().second());
+    now = now.addMSecs(-now.time().msec());
 
     // Get the list of reminders that are dated at this minute and
     // erase them from reminder storage
     QLinkedList<Appointment> reminders;
     QMap<QDateTime, Appointment>::iterator it = _reminders.find(now);
 
-    // TODO: find operation fails
+    // Collect all reminders dated to now
     while (it != _reminders.end() && it.key() == now) {
         reminders.push_back(*it);
         it = _reminders.erase(it);
@@ -199,7 +200,6 @@ void Calendar::buildCalendar(QNetworkReply* reply)
                     triggerInfo = triggerInfo.left(triggerInfo.indexOf("\r\n"));
 
                     // Only add reminder times that haven't passed yet
-                    // TODO: not all reminders register correctly
                     QDateTime reminderStamp = determineReminderStamp(newApt.start(), triggerInfo);
                     assert(reminderStamp.isValid());
                     if (now <= reminderStamp)

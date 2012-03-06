@@ -130,12 +130,12 @@ void CalendarDBView::unregisterCalendar(Calendar* cal)
 
 void CalendarDBView::processNewOngoingAptEvents(Calendar *cal, const QLinkedList<Appointment> &list)
 {
-    createNotification(cal, "Ongoing appointments", list);
+    createNotification(cal, "Now in progress", list);
 }
 
 void CalendarDBView::processReminders(Calendar *cal, const QLinkedList<Appointment>& list)
 {
-    createNotification(cal, "Coming up", list);
+    createNotification(cal, "Event reminder", list);
 }
 
 void CalendarDBView::handleCalendarException(Calendar *cal, Calendar::ExceptionType type)
@@ -161,7 +161,7 @@ void CalendarDBView::showNewCalendarDialog()
 
     // Try to add the calendar if the input is accepted
     if (returnCode == QDialog::Accepted) {
-        _calDB->addCalendar(newCalDialog.inputValue(), _calDB->composeNextColor());  // TODO: vary colors
+        _calDB->addCalendar(newCalDialog.inputValue(), _calDB->composeNextColor());
     }
 }
 
@@ -174,6 +174,9 @@ void CalendarDBView::notificationClosed(AptNotification* aptNfy)
     _nfyStackLock.lock();
     QMap<int, AptNotification*>::iterator it = _nfyStack.begin();
 
+    // TODO: stacking produces unexpected results in
+    // a test with 3 calendars generating notifications
+    // simultaneously
     while (it != _nfyStack.end()) {
         AptNotification* curNfy = it.value();
 

@@ -12,7 +12,7 @@ const int AptNotification::BORDERSPACING = 10;
 AptNotification::AptNotification(Calendar *cal, const QString &title, const QLinkedList<Appointment> &aptList, unsigned stackPos)
 {
     _cal = cal;
-    _lblNfyTitle.setText(title);
+    _lblNfyTitle.setText("<b>" + cal->name() + "</b> -- " + title);
     _aptList = aptList;
 
     setStackPosition(stackPos);
