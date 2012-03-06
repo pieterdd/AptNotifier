@@ -161,7 +161,7 @@ void CalendarDBView::showNewCalendarDialog()
 
     // Try to add the calendar if the input is accepted
     if (returnCode == QDialog::Accepted) {
-        _calDB->addCalendar(newCalDialog.inputValue(), QColor(255, 0, 0));  // TODO: vary colors
+        _calDB->addCalendar(newCalDialog.inputValue(), _calDB->composeNextColor());  // TODO: vary colors
     }
 }
 

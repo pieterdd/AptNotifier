@@ -30,6 +30,9 @@ public:
     /** Removes a certain calendar from the list and saves settings to file. Has
       * O(n) time complexity under the current list-based implementation. */
     void removeCalendar(Calendar* cal);
+
+    /** Composes the color for the next calendar by varying the hue. */
+    QColor composeNextColor();
 private:
     /** Writes the current list of calendars to disk. */
     void writeCalendars();

@@ -26,8 +26,7 @@ void CalendarDB::loadCalendars()
     // Read one URL per line
     while (!file.atEnd()) {
         // Vary calendar colors by varying hue values
-        QColor calColor(0, 0, 0);
-        calColor.setHsv((_calendars.size() * 50) % 360, 255, 255);
+        QColor calColor = composeNextColor();
 
         QString line = file.readLine();
         line = line.trimmed();
@@ -62,6 +61,15 @@ void CalendarDB::removeCalendar(Calendar *cal)
     // behavior is likely caused by a bug, so it's a good idea to
     // raise SIGABRT here.
     abort();
+}
+
+QColor CalendarDB::composeNextColor()
+{
+    // Produce a hue value based on the next calendar ID
+    QColor calColor(0, 0, 0);
+    calColor.setHsv((_calendars.size() * 50) % 360, 255, 255);
+
+    return calColor;
 }
 
 void CalendarDB::writeCalendars()
