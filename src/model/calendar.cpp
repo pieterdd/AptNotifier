@@ -18,32 +18,37 @@ Calendar::Calendar(const QString &url, const QColor &color)
     QByteArray qbaUrl;
     _url = QUrl::fromEncoded(qbaUrl.append(url));
     _name = "Untitled Calendar";
+    _calChecksum = 0;
     _color = color;
     buildCalendarImage();
 
     // Wire timers
-    connect(&_nfyTimer, SIGNAL(timeout()), this, SLOT(prepareNotifications()));
+    connect(&_nfyTimer, SIGNAL(timeout()), this, SLOT(sendNotifications()));
 
     // Start calendar download
-    connect(&_naMgr, SIGNAL(finished(QNetworkReply*)), this, SLOT(buildCalendar(QNetworkReply*)));
+    connect(&_naMgr, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
     _naMgr.get(QNetworkRequest(_url));
 }
 
 Calendar::~Calendar() {
 }
 
-void Calendar::prepareNotifications()
+void Calendar::sendNotifications()
 {
+    _bufferLock.lock();
+
     // First get the ongoing appointment notifications out the door,
     // then process the reminders.
-    prepareNotifications_Ongoing();
-    prepareNotifications_Reminders();
+    sendNotifications_Ongoing();
+    sendNotifications_Reminders();
 
     // Check notifications again in half a minute
-    QTimer::singleShot(30000, this, SLOT(prepareNotifications()));
+    QTimer::singleShot(30000, this, SLOT(sendNotifications()));
+
+    _bufferLock.unlock();
 }
 
-void Calendar::prepareNotifications_Ongoing()
+void Calendar::sendNotifications_Ongoing()
 {
     QDateTime now = QDateTime::currentDateTime();
     now = now.addSecs(-now.time().second());
@@ -86,7 +91,7 @@ void Calendar::prepareNotifications_Ongoing()
         emit newOngoingAppointments(this, newOngoing);
 }
 
-void Calendar::prepareNotifications_Reminders()
+void Calendar::sendNotifications_Reminders()
 {
     QDateTime now = QDateTime::currentDateTime();
     now = now.addSecs(-now.time().second());
@@ -129,35 +134,41 @@ void Calendar::buildCalendarImage()
     }
 }
 
-QDateTime Calendar::determineReminderStamp(const QDateTime &aptStart, const QString &triggerInfo)
+void Calendar::flushCalendarCache()
 {
-    QDateTime reminderStamp = aptStart;
-    QString triggerTmp = triggerInfo;
-
-    // Extract offsets from the string and apply them to the timestamp
-    int dayPos = triggerTmp.indexOf("D");
-    if (dayPos != -1) {
-        reminderStamp = reminderStamp.addDays(-triggerTmp.left(dayPos).toInt());
-        triggerTmp = triggerTmp.mid(triggerTmp.indexOf(QRegExp("[0-9]"), dayPos));
-    }
-
-    int hourPos = triggerTmp.indexOf("H");
-    if (hourPos != -1) {
-        reminderStamp = reminderStamp.addSecs(-3600*triggerTmp.mid(0, hourPos).toInt());
-        triggerTmp = triggerTmp.mid(triggerTmp.indexOf(QRegExp("[0-9]"), hourPos));
-    }
-
-    int minPos = triggerTmp.indexOf("M");
-    if (minPos != -1) {
-        reminderStamp = reminderStamp.addSecs(-60*triggerTmp.mid(0, minPos).toInt());
-    }
-
-    return reminderStamp;
+    _appointments.clear();
+    _reminders.clear();
+    _ongoingApts.clear();
 }
 
-void Calendar::buildCalendar(QNetworkReply* reply)
+void Calendar::parseNetworkResponse(QNetworkReply* reply)
 {
+    // TODO: respond to failure
     QString rawData = reply->readAll();
+
+    // TODO: compare checksums
+    int newChecksum = qChecksum(rawData.toUtf8(), rawData.length());;
+    if (_calChecksum != newChecksum) {
+        _bufferLock.lock();
+
+        // Notify the view on file changes, excluding initial load
+        if (_calChecksum != 0)
+            emit calendarChanged();
+        // Flush old calendar data if needed
+        else
+            flushCalendarCache();
+
+        // Repopulate the cache and unlock the buffers
+        importCalendarData(rawData);
+        _bufferLock.unlock();
+
+        // Send out our first batch of notifications
+        sendNotifications();
+    }
+}
+
+void Calendar::importCalendarData(QString rawData)
+{
     QDateTime now = QDateTime::currentDateTime();
 
     // If we don't have the ICS header, this is not a valid calendar
@@ -214,9 +225,32 @@ void Calendar::buildCalendar(QNetworkReply* reply)
             rawData = rawData.mid(endPos + 10);
         }
     }
+}
 
-    // Send out our first batch of notifications
-    prepareNotifications();
+QDateTime Calendar::determineReminderStamp(const QDateTime &aptStart, const QString &triggerInfo)
+{
+    QDateTime reminderStamp = aptStart;
+    QString triggerTmp = triggerInfo;
+
+    // Extract offsets from the string and apply them to the timestamp
+    int dayPos = triggerTmp.indexOf("D");
+    if (dayPos != -1) {
+        reminderStamp = reminderStamp.addDays(-triggerTmp.left(dayPos).toInt());
+        triggerTmp = triggerTmp.mid(triggerTmp.indexOf(QRegExp("[0-9]"), dayPos));
+    }
+
+    int hourPos = triggerTmp.indexOf("H");
+    if (hourPos != -1) {
+        reminderStamp = reminderStamp.addSecs(-3600*triggerTmp.mid(0, hourPos).toInt());
+        triggerTmp = triggerTmp.mid(triggerTmp.indexOf(QRegExp("[0-9]"), hourPos));
+    }
+
+    int minPos = triggerTmp.indexOf("M");
+    if (minPos != -1) {
+        reminderStamp = reminderStamp.addSecs(-60*triggerTmp.mid(0, minPos).toInt());
+    }
+
+    return reminderStamp;
 }
 
 short Calendar::calcTimeShift() {

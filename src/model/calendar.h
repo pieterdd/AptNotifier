@@ -48,17 +48,25 @@ public:
       */
     enum ExceptionType { InvalidFormat };
 private slots:
-    /** Parses a calendar file to extract all appointments. */
-    void buildCalendar(QNetworkReply*);
+    /** Analyses the downloaded calendar file and rebuilds the cache if the
+      * checksum of the file has changed. */
+    void parseNetworkResponse(QNetworkReply*);
 
-    /** On regular intervals, this function is called to trigger notifications
-      * about ongoing appointments and reminders. */
-    void prepareNotifications();
-    void prepareNotifications_Ongoing();
-    void prepareNotifications_Reminders();
+    /** [THREAD-SAFE] On regular intervals, this function is
+      * called to trigger notifications about ongoing appointments
+      * and reminders. */
+    void sendNotifications();
+    void sendNotifications_Ongoing();
+    void sendNotifications_Reminders();
 private:
     /** Creates the pixmap for this calendar based on the color. */
     void buildCalendarImage();
+
+    /** Clears all appointments and reminders. */
+    void flushCalendarCache();
+
+    /** Parses an ICS file and extracts appointments with their reminders. */
+    void importCalendarData(QString rawData);
 
     /** Determines the reminder timestamp of an appointment based on the appointment
       * time and the "TRIGGER" field. */
@@ -71,6 +79,7 @@ private:
 
     QUrl _url;
     QString _name;
+    int _calChecksum;
     QColor _color;
     QImage _image;
     QTimer _nfyTimer;
@@ -84,6 +93,9 @@ private:
 
     /** Contains all ongoing appointments. */
     QLinkedList<Appointment> _ongoingApts;
+
+    /** Mutex for all the aforementioned buffers. */
+    QMutex _bufferLock;
 
     static short timeShift;
     static const short IMAGEDIM;
@@ -100,6 +112,10 @@ signals:
 
     /** Broadcasts reminders at semi-regular intervals. */
     void newReminders(Calendar*, const QLinkedList<Appointment>&);
+
+    /** Broadcast when the calendar file has new changes and will
+      * be re-parsed. */
+    void calendarChanged();
 };
 
 Q_DECLARE_METATYPE(Calendar*)

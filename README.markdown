@@ -12,4 +12,4 @@ This application and its source code is provided to you for free under a [Creati
 Acknowledgements
 ================
 
-[Gnome Project](http://www.iconfinder.com/icondetails/55237/48/48_appointment_gnome_soon_icon) for the system tray icon
+- [Gnome Project](http://www.iconfinder.com/icondetails/55237/48/48_appointment_gnome_soon_icon) for the system tray icon
