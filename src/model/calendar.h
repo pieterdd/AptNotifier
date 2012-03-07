@@ -40,15 +40,18 @@ public:
     const QImage& image() const { return _image; }
     static short getTimeShift() { return Calendar::timeShift; }
 
+    /** [THREAD-SAFE] Triggers a refresh of the calendar. */
+    void update();
+
     /**
       * ERROR CODES FOR CALENDAR HANDLING
       *
       * InvalidFormat
       *     We couldn't recognize this as a valid calendar.
       */
-    enum ExceptionType { InvalidFormat };
+    enum ExceptionType { InvalidFormat, DownloadError };
 private slots:
-    /** Analyses the downloaded calendar file and rebuilds the cache if the
+    /** [THREAD-SAFE] Analyses the downloaded calendar file and rebuilds the cache if the
       * checksum of the file has changed. */
     void parseNetworkResponse(QNetworkReply*);
 
@@ -115,7 +118,7 @@ signals:
 
     /** Broadcast when the calendar file has new changes and will
       * be re-parsed. */
-    void calendarChanged();
+    void calendarChanged(Calendar*);
 };
 
 Q_DECLARE_METATYPE(Calendar*)

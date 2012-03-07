@@ -40,6 +40,7 @@ private:
 
     /** The associated CalendarDB in the Model. */
     CalendarDB* _calDB;
+    QMutex _calsLock;
 
     // Controls
     QWidget _centralWidget;

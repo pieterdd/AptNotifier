@@ -37,7 +37,19 @@ private:
     /** Writes the current list of calendars to disk. */
     void writeCalendars();
 
+    /** Sets up a single-shot timer for the next calendar refresh. */
+    void scheduleUpdate();
+
+    /** The list of all calendars. */
     QLinkedList<Calendar*> _calendars;
+    QMutex _calLock;
+
+    /** Number of minutes to wait before refreshing all calendars */
+    int _refreshInterval;
+private slots:
+    /** Updates all calendars. If a calendar file hasn't changed (as determined
+      * by the checksum), its buffers will not be re-populated. */
+    void updateCalendars();
 signals:
     /** Informs observers of a successfully added calendar */
     void newCalendarAdded(Calendar*);

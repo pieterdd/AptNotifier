@@ -24,13 +24,16 @@ Calendar::Calendar(const QString &url, const QColor &color)
 
     // Wire timers
     connect(&_nfyTimer, SIGNAL(timeout()), this, SLOT(sendNotifications()));
-
-    // Start calendar download
-    connect(&_naMgr, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
-    _naMgr.get(QNetworkRequest(_url));
 }
 
 Calendar::~Calendar() {
+}
+
+void Calendar::update()
+{
+    // Start calendar download
+    connect(&_naMgr, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
+    _naMgr.get(QNetworkRequest(_url));
 }
 
 void Calendar::sendNotifications()
@@ -144,22 +147,29 @@ void Calendar::flushCalendarCache()
 void Calendar::parseNetworkResponse(QNetworkReply* reply)
 {
     // TODO: respond to failure
-    QString rawData = reply->readAll();
+    QNetworkReply::NetworkError error = reply->error();
+    if (error != QNetworkReply::NoError) {
+        emit calendarExceptionThrown(this, DownloadError);
+        return;
+    }
 
-    // TODO: compare checksums
+    // Extract the server response and file checksum
+    QString rawData = reply->readAll();
     int newChecksum = qChecksum(rawData.toUtf8(), rawData.length());;
-    if (_calChecksum != newChecksum) {
+
+    // Compare checksums to see if a reload is necessary
+    if (_calChecksum != newChecksum && rawData != "") {
         _bufferLock.lock();
 
-        // Notify the view on file changes, excluding initial load
-        if (_calChecksum != 0)
-            emit calendarChanged();
-        // Flush old calendar data if needed
-        else
-            flushCalendarCache();
-
-        // Repopulate the cache and unlock the buffers
+        // Flush and repopulate the cache
+        flushCalendarCache();
         importCalendarData(rawData);
+
+        // Notify the view on file changes, unless it's our initial load
+        if (_calChecksum != 0)
+            emit calendarChanged(this);
+
+        _calChecksum = newChecksum;
         _bufferLock.unlock();
 
         // Send out our first batch of notifications

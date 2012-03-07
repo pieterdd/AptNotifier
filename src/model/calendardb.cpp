@@ -6,14 +6,18 @@
 
 CalendarDB::CalendarDB()
 {
+    _refreshInterval = 1;
+    scheduleUpdate();
 }
 
 CalendarDB::~CalendarDB()
 {
+    _calLock.lock();
     for (QLinkedList<Calendar*>::iterator it = _calendars.begin();
          it != _calendars.end(); ++it) {
         delete *it;
     }
+    _calLock.unlock();
 }
 
 void CalendarDB::loadCalendars()
@@ -36,8 +40,14 @@ void CalendarDB::loadCalendars()
 
 void CalendarDB::addCalendar(const QString &url, const QColor &color, bool writeChange)
 {
-    _calendars.push_back(new Calendar(url, color));
-    emit newCalendarAdded(_calendars.last());
+
+    // Create new calendar, trigger its first update
+    Calendar* newCalendar = new Calendar(url, color);
+    _calLock.lock();
+    _calendars.push_back(newCalendar);
+    emit newCalendarAdded(newCalendar);
+    newCalendar->update();
+    _calLock.unlock();
 
     // Write the updated list to the savefile if needed
     if (writeChange)
@@ -46,16 +56,20 @@ void CalendarDB::addCalendar(const QString &url, const QColor &color, bool write
 
 void CalendarDB::removeCalendar(Calendar *cal)
 {
+
     // Search for the pointer in the linked list
+    _calLock.lock();
     for (QLinkedList<Calendar*>::iterator it = _calendars.begin();
          it != _calendars.end(); ++it) {
         if (*it == cal) {
             _calendars.erase(it);
             emit removingCalendar(cal);
             delete cal;
+            _calLock.unlock();
             return;
         }
     }
+    _calLock.unlock();
 
     // If this point is reached, the calendar couldn't be found. This
     // behavior is likely caused by a bug, so it's a good idea to
@@ -76,12 +90,34 @@ void CalendarDB::writeCalendars()
 {
     QFile file("calendars");
 
+    // Open file output
     if (!file.open(QIODevice::WriteOnly))
         return;
-
     QTextStream out(&file);
+
+    // Write the URLs
+    _calLock.lock();
     foreach (Calendar* cal, _calendars)
         out << cal->url() << "\n";
+    _calLock.unlock();
 
+    // Done.
     file.close();
+}
+
+void CalendarDB::scheduleUpdate()
+{
+    QTimer::singleShot(_refreshInterval*1000*60, this, SLOT(updateCalendars()));
+}
+
+void CalendarDB::updateCalendars()
+{
+    // Run the update command on all calendars
+    _calLock.lock();
+    foreach (Calendar* item, _calendars)
+        item->update();
+    _calLock.unlock();
+
+    // Schedule the next update
+    scheduleUpdate();
 }

@@ -91,6 +91,8 @@ void CalendarDBView::createNotification(Calendar* cal, const QString &title, con
 
 void CalendarDBView::registerCalendar(Calendar* cal)
 {
+    _calsLock.lock();
+
     connect(cal, SIGNAL(nameChanged(Calendar*)), this, SLOT(processCalendarNameChange(Calendar*)));
     connect(cal, SIGNAL(newOngoingAppointments(Calendar*,QLinkedList<Appointment>)), this, SLOT(processNewOngoingAptEvents(Calendar*,QLinkedList<Appointment>)));
     connect(cal, SIGNAL(newReminders(Calendar*,QLinkedList<Appointment>)), this, SLOT(processReminders(Calendar*,QLinkedList<Appointment>)));
@@ -101,6 +103,8 @@ void CalendarDBView::registerCalendar(Calendar* cal)
     _calList.addItem(newItem);
     _calItems[cal] = newItem;
     _widItems[newItem] = cal;
+
+    _calsLock.unlock();
 }
 
 void CalendarDBView::processCalendarNameChange(Calendar* cal)
@@ -112,6 +116,8 @@ void CalendarDBView::processCalendarNameChange(Calendar* cal)
 
 void CalendarDBView::unregisterCalendar(Calendar* cal)
 {
+    _calsLock.lock();
+
     // Search for the associated QListWidgetItem and associated iterators
     QMap<Calendar*, QListWidgetItem*>::iterator calIt = _calItems.find(cal);
     assert(calIt != _calItems.end());
@@ -126,6 +132,8 @@ void CalendarDBView::unregisterCalendar(Calendar* cal)
     // Remove the calendar from the Calendar/QListWidgetItem dictionaries
     _calItems.erase(calIt);
     _widItems.erase(widIt);
+
+    _calsLock.unlock();
 }
 
 void CalendarDBView::processNewOngoingAptEvents(Calendar *cal, const QLinkedList<Appointment> &list)
@@ -140,8 +148,12 @@ void CalendarDBView::processReminders(Calendar *cal, const QLinkedList<Appointme
 
 void CalendarDBView::handleCalendarException(Calendar *cal, Calendar::ExceptionType type)
 {
-    if (type == Calendar::InvalidFormat)
+    if (type == Calendar::InvalidFormat) {
         showInvalidCalendarFormatError(cal);
+    } else if (type == Calendar::DownloadError) {
+        _trayIcon.showMessage("AptNotifier", cal->name() + " could not be updated. You may miss notifications.\n\n" + \
+                              "In most cases, this means that you're offline or the URL you provided is currently unreachable.", QSystemTrayIcon::Warning, 5000);
+    }
 }
 
 void CalendarDBView::showInvalidCalendarFormatError(Calendar*)
@@ -197,6 +209,7 @@ void CalendarDBView::notificationClosed(AptNotification* aptNfy)
         } else
             ++it;
     }
+
     _nfyStackLock.unlock();
 }
 
