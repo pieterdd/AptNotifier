@@ -18,9 +18,8 @@ CalendarDBView::CalendarDBView(CalendarDB *calDB, QWidget *parent)
     setupGUI();
 
     // Load the calendar list from a file
-    _trayIcon.showMessage("AptNotifier", "Your calendars are being loaded...", QSystemTrayIcon::Information, 3000);
+    _trayIcon.showMessage("AptNotifier", "Your calendars are being loaded...", QSystemTrayIcon::Information, 1000);
     _calDB->loadCalendars();
-    _trayIcon.showMessage("AptNotifier", "Your calendars have been loaded!", QSystemTrayIcon::Information, 1000);
 }
 
 CalendarDBView::~CalendarDBView()

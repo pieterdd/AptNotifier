@@ -5,6 +5,7 @@
 #include <QFile>
 #include <QDebug>
 #include <cassert>
+#include <QTextStream>
 #include <QMessageBox>
 #include <QNetworkReply>
 #include <QNetworkRequest>
@@ -22,8 +23,9 @@ Calendar::Calendar(const QString &url, const QColor &color)
     _color = color;
     buildCalendarImage();
 
-    // Wire timers
+    // Wire QObjects
     connect(&_nfyTimer, SIGNAL(timeout()), this, SLOT(sendNotifications()));
+    connect(&_naMgr, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
 }
 
 Calendar::~Calendar() {
@@ -31,8 +33,8 @@ Calendar::~Calendar() {
 
 void Calendar::update()
 {
-    // Start calendar download
-    connect(&_naMgr, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
+    // Start calendar download asynchronously. After retrieving the
+    // file, parseNetworkResponse will take over.
     _naMgr.get(QNetworkRequest(_url));
 }
 
@@ -146,7 +148,9 @@ void Calendar::flushCalendarCache()
 
 void Calendar::parseNetworkResponse(QNetworkReply* reply)
 {
-    // TODO: respond to failure
+    // If anything went wrong, halt the update and broadcast
+    // a warning to the view. Any previously cached data will
+    // be preserved.
     QNetworkReply::NetworkError error = reply->error();
     if (error != QNetworkReply::NoError) {
         emit calendarExceptionThrown(this, DownloadError);
@@ -155,7 +159,8 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
 
     // Extract the server response and file checksum
     QString rawData = reply->readAll();
-    int newChecksum = qChecksum(rawData.toUtf8(), rawData.length());;
+    rawData.replace(QRegExp("\\nDTSTAMP:[^\\n]+\\n"), "");
+    int newChecksum = qChecksum(rawData.toUtf8(), rawData.length());
 
     // Compare checksums to see if a reload is necessary
     if (_calChecksum != newChecksum && rawData != "") {

@@ -62,10 +62,14 @@ void CalendarDB::removeCalendar(Calendar *cal)
     for (QLinkedList<Calendar*>::iterator it = _calendars.begin();
          it != _calendars.end(); ++it) {
         if (*it == cal) {
+            // Erase the calendar from the list
             _calendars.erase(it);
             emit removingCalendar(cal);
             delete cal;
             _calLock.unlock();
+
+            // Write changes
+            writeCalendars();
             return;
         }
     }
