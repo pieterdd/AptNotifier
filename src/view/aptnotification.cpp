@@ -45,7 +45,9 @@ void AptNotification::setStackPosition(unsigned stackPos)
 void AptNotification::setupGUI()
 {
     // TODO: add visual representation of cycle timer and calendar icon
+    setWindowFlags(Qt::Popup);
     connect(this, SIGNAL(finished(int)), this, SLOT(sendNotificationFinished()));
+    connect(&_btnNfyClose, SIGNAL(clicked()), this, SLOT(sendNotificationFinished()));
     setContentsMargins(0, 0, 0, 0);
     setLayout(&_mainLayout);
 

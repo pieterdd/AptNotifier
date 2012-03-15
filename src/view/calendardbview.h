@@ -35,8 +35,11 @@ private:
     /** Creates a notification with a certain title and the appointments in the supplied list. */
     void createNotification(Calendar* cal, const QString& title, const QLinkedList<Appointment>& list);
 
-    /** Shows an Invalid Calendar error for a given calendar. */
-    void showInvalidCalendarFormatError(Calendar*);
+    /** Updates the name tag of a certain calendar in the list widget. */
+    void updateCalendarLabel(Calendar* cal);
+
+    /** Updates the "all calendars online?" status of the application. */
+    void refreshCalUpdateStatus();
 
     /** The associated CalendarDB in the Model. */
     CalendarDB* _calDB;
@@ -54,6 +57,8 @@ private:
     QMap<QListWidgetItem*, Calendar*> _widItems;
     QSystemTrayIcon _trayIcon;
     QMenu _trayMenu;
+    QString _trayLabel;
+    bool _allCalsOnline;
 
     // Notification-related data
     QMutex _nfyStackLock;
@@ -69,6 +74,9 @@ private slots:
     /** Updates view when the name of a calendar changes. */
     void processCalendarNameChange(Calendar*);
 
+    /** Updates view when the status of a calendar changes. */
+    void processCalendarStatusChange(Calendar* cal);
+
     /** Updates view when a calendar is removed. */
     void unregisterCalendar(Calendar* cal);
 
@@ -78,10 +86,8 @@ private slots:
     /** Triggered when a calendar broadcasts new reminders. */
     void processReminders(Calendar* cal, const QLinkedList<Appointment>& list);
 
-    /** If a calendar broadcasts an exception, this function handles it.
-      * We've used this system as opposed to C++ exception handling because
-      * this form of exception handling can easily be implemented asynchronously. */
-    void handleCalendarException(Calendar* cal, Calendar::ExceptionType type);
+    /** Shows an Invalid Calendar error for a given calendar. */
+    void showInvalidCalendarFormatError(Calendar* cal);
 
     /** When a notification dialog closes, we need to react to this
       * to make the notification stacking mechanism work. */

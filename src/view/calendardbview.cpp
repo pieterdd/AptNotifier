@@ -15,6 +15,8 @@ CalendarDBView::CalendarDBView(CalendarDB *calDB, QWidget *parent)
 {
     _nfySpawnY = 0;
     _calDB = calDB;
+    _trayLabel = "AptNotifier";
+    _allCalsOnline = true;
     setupGUI();
 
     // Load the calendar list from a file
@@ -63,7 +65,7 @@ void CalendarDBView::setupGUI()
 
     // Tray icon
     _trayIcon.setIcon(QIcon(":/general/appointment.png"));
-    _trayIcon.setToolTip("AptNotifier (" + QString(__DATE__) + ")");
+    _trayIcon.setToolTip(_trayLabel);
     _trayIcon.show();
     QAction* showWindow = _trayMenu.addAction("Show window");
     QAction* quitAct = _trayMenu.addAction("Quit");
@@ -84,33 +86,96 @@ void CalendarDBView::createNotification(Calendar* cal, const QString &title, con
     _nfyStackLock.unlock();
 
     // Activate the window
-    aptNfy->setWindowFlags(Qt::CustomizeWindowHint | Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
     aptNfy->show();
 }
 
-void CalendarDBView::registerCalendar(Calendar* cal)
+void CalendarDBView::updateCalendarLabel(Calendar *cal)
+{
+    QString statusName;
+    switch (cal->status()) {
+    default:
+    case Calendar::NotLoaded:
+        statusName = "not loaded";
+        break;
+    case Calendar::Online:
+        statusName = "online";
+        break;
+    case Calendar::Offline:
+        statusName = "offline";
+        break;
+    }
+
+    QMap<Calendar*, QListWidgetItem*>::iterator it = _calItems.find(cal);
+    assert(it != _calItems.end());
+    it.value()->setText(cal->name() + " (" + statusName + ")");
+}
+
+void CalendarDBView::refreshCalUpdateStatus()
 {
     _calsLock.lock();
 
-    connect(cal, SIGNAL(nameChanged(Calendar*)), this, SLOT(processCalendarNameChange(Calendar*)));
-    connect(cal, SIGNAL(newOngoingAppointments(Calendar*,QLinkedList<Appointment>)), this, SLOT(processNewOngoingAptEvents(Calendar*,QLinkedList<Appointment>)));
-    connect(cal, SIGNAL(newReminders(Calendar*,QLinkedList<Appointment>)), this, SLOT(processReminders(Calendar*,QLinkedList<Appointment>)));
-    connect(cal, SIGNAL(calendarExceptionThrown(Calendar*,Calendar::ExceptionType)), this, SLOT(handleCalendarException(Calendar*,Calendar::ExceptionType)));
+    // Are all known calendars now online?
+    _allCalsOnline = true;
+    for (QMap<Calendar*, QListWidgetItem*>::iterator it = _calItems.begin();
+         it != _calItems.end() && _allCalsOnline; ++it) {
+        Calendar* curCal = it.key();
+        if (curCal->status() != Calendar::Online) {
+            _allCalsOnline = false;
+            setWindowIcon(QIcon(":/general/appointmentgrey.png"));
+            _trayIcon.setToolTip(_trayLabel + " -- Some calendars are offline.");
+            _trayIcon.setIcon(QIcon(":/general/appointmentgrey.png"));
+        }
+    }
 
-    // Create new widget item. The list widget takes ownership, so no need to delete.
-    QListWidgetItem* newItem = new QListWidgetItem(QIcon(QPixmap::fromImage(cal->image()).scaledToHeight(_calList.height())), cal->name());
-    _calList.addItem(newItem);
-    _calItems[cal] = newItem;
-    _widItems[newItem] = cal;
+    // All found calendars are online, we're good to go.
+    if (_allCalsOnline) {
+        setWindowIcon(QIcon(":/general/appointment.png"));
+        _trayIcon.setToolTip(_trayLabel);
+        _trayIcon.setIcon(QIcon(":/general/appointment.png"));
+    }
 
     _calsLock.unlock();
 }
 
+void CalendarDBView::registerCalendar(Calendar* cal)
+{
+    connect(cal, SIGNAL(nameChanged(Calendar*)), this, SLOT(processCalendarNameChange(Calendar*)));
+    connect(cal, SIGNAL(newOngoingAppointments(Calendar*,QLinkedList<Appointment>)), this, SLOT(processNewOngoingAptEvents(Calendar*,QLinkedList<Appointment>)));
+    connect(cal, SIGNAL(newReminders(Calendar*,QLinkedList<Appointment>)), this, SLOT(processReminders(Calendar*,QLinkedList<Appointment>)));
+    connect(cal, SIGNAL(formatNotRecognized(Calendar*)), this, SLOT(showInvalidCalendarFormatError(Calendar*)));
+    connect(cal, SIGNAL(statusChanged(Calendar*)), this, SLOT(processCalendarStatusChange(Calendar*)));
+
+    // Create new widget item. The list widget takes ownership, so no need to delete.
+    _calsLock.lock();
+    QListWidgetItem* newItem = new QListWidgetItem(QIcon(QPixmap::fromImage(cal->image()).scaledToHeight(_calList.height())), cal->name());
+    _calList.addItem(newItem);
+    _calItems[cal] = newItem;
+    _widItems[newItem] = cal;
+    _calsLock.unlock();
+
+    // Refresh the global calendar update status.
+    refreshCalUpdateStatus();
+}
+
 void CalendarDBView::processCalendarNameChange(Calendar* cal)
 {
-    QMap<Calendar*, QListWidgetItem*>::iterator it = _calItems.find(cal);
-    assert(it != _calItems.end());
-    it.value()->setText(cal->name());
+    // TODO VERIFY -- Thread safety: this slot will not be executing for two
+    // objects simultaneously.
+
+    // Only an update of the list widget is needed
+    updateCalendarLabel(cal);
+}
+
+void CalendarDBView::processCalendarStatusChange(Calendar *cal)
+{
+    // TODO VERIFY -- Thread safety: this slot will not be executing for two
+    // objects simultaneously.
+
+    // Update the list widget
+    updateCalendarLabel(cal);
+
+    // Refresh the global calendar update status
+    refreshCalUpdateStatus();
 }
 
 void CalendarDBView::unregisterCalendar(Calendar* cal)
@@ -133,6 +198,9 @@ void CalendarDBView::unregisterCalendar(Calendar* cal)
     _widItems.erase(widIt);
 
     _calsLock.unlock();
+
+    // Refresh the global calendar update status.
+    refreshCalUpdateStatus();
 }
 
 void CalendarDBView::processNewOngoingAptEvents(Calendar *cal, const QLinkedList<Appointment> &list)
@@ -145,21 +213,12 @@ void CalendarDBView::processReminders(Calendar *cal, const QLinkedList<Appointme
     createNotification(cal, "Event reminder", list);
 }
 
-void CalendarDBView::handleCalendarException(Calendar *cal, Calendar::ExceptionType type)
-{
-    if (type == Calendar::InvalidFormat) {
-        showInvalidCalendarFormatError(cal);
-    } else if (type == Calendar::DownloadError) {
-        _trayIcon.showMessage("AptNotifier", cal->name() + " could not be updated. You may miss notifications.\n\n" + \
-                              "In most cases, this means that you're offline or the URL you provided is currently unreachable.", QSystemTrayIcon::Warning, 5000);
-    }
-}
-
-void CalendarDBView::showInvalidCalendarFormatError(Calendar*)
+void CalendarDBView::showInvalidCalendarFormatError(Calendar* cal)
 {
     QMessageBox msg;
-    QString text = "A calendar you're trying to load could not be recognized. Please make sure that you have an active internet connection.\n\n";
-    text += "You will NOT receive alerts from this calendar.";
+    QString text = "One of your calendars could not be recognized. Please make sure that you have an active internet connection and verify the address of the calendar.\n\n";
+    text += "You will NOT receive alerts from this calendar.\n";
+    text += "URL: " + cal->url();
     msg.setText(text);
     msg.setIcon(QMessageBox::Warning);
     msg.exec();

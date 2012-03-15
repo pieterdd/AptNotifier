@@ -28,10 +28,21 @@ class QNetworkAccessManager;
 class Calendar : public QObject
 {
     Q_OBJECT
-    Q_ENUMS(ExceptionType)
+    Q_ENUMS(ExceptionCode)
 public:
     Calendar(const QString& url, const QColor& color);
     ~Calendar();
+
+    /** STATUS CODES FOR CALENDARS
+      *
+      * NotLoaded
+      *     We haven't attempted to fetch the calendar yet.
+      * Online
+      *     Last automatic/manual update was successful.
+      * Offline
+      *     Last automatic/manual update was unsuccessful.
+      */
+    enum StatusCode { NotLoaded, Online, Offline };
 
     /* Getters */
     QString url() const { return (QString)_url.toEncoded(); }
@@ -39,17 +50,11 @@ public:
     const QColor& color() const { return _color; }
     const QImage& image() const { return _image; }
     static short getTimeShift() { return Calendar::timeShift; }
+    StatusCode status() const { return _status; }
 
     /** [THREAD-SAFE] Triggers a refresh of the calendar. */
     void update();
 
-    /**
-      * ERROR CODES FOR CALENDAR HANDLING
-      *
-      * InvalidFormat
-      *     We couldn't recognize this as a valid calendar.
-      */
-    enum ExceptionType { InvalidFormat, DownloadError };
 private slots:
     /** [THREAD-SAFE] Analyses the downloaded calendar file and rebuilds the cache if the
       * checksum of the file has changed. */
@@ -87,6 +92,7 @@ private:
     QImage _image;
     QTimer _nfyTimer;
     QNetworkAccessManager _naMgr;
+    enum StatusCode _status;
 
     /** Contains all appointments that aren't ongoing. Sorted on start time. */
     QMultiMap<QDateTime, Appointment> _appointments;
@@ -103,9 +109,12 @@ private:
     static short timeShift;
     static const short IMAGEDIM;
 signals:
-    /** Broadcast for calendar exceptions. We picked this over C++
-      * exception throwing because it works asynchronously as well. */
-    void calendarExceptionThrown(Calendar*, Calendar::ExceptionType);
+    /** Broadcast when the downloaded calendar has an unrecognized format. */
+    void formatNotRecognized(Calendar*);
+
+    /** Broadcast when the calendar's status code changes. Useful for
+      * providing availability updates to the view. */
+    void statusChanged(Calendar*);
 
     /** Broadcast when the calendar name changes. */
     void nameChanged(Calendar*);

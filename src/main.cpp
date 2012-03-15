@@ -7,7 +7,6 @@
 
 int main(int argc, char *argv[])
 {
-    qRegisterMetaType<Calendar::ExceptionType>("ExceptionType");
     QApplication a(argc, argv);
 
     CalendarDB calDB;

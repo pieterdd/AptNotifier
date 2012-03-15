@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/general">
         <file>appointment.png</file>
+        <file>appointmentgrey.png</file>
     </qresource>
 </RCC>

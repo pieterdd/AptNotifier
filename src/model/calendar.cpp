@@ -21,6 +21,7 @@ Calendar::Calendar(const QString &url, const QColor &color)
     _name = "Untitled Calendar";
     _calChecksum = 0;
     _color = color;
+    _status = NotLoaded;
     buildCalendarImage();
 
     // Wire QObjects
@@ -148,38 +149,46 @@ void Calendar::flushCalendarCache()
 
 void Calendar::parseNetworkResponse(QNetworkReply* reply)
 {
-    // If anything went wrong, halt the update and broadcast
-    // a warning to the view. Any previously cached data will
-    // be preserved.
     QNetworkReply::NetworkError error = reply->error();
-    if (error != QNetworkReply::NoError) {
-        emit calendarExceptionThrown(this, DownloadError);
-        return;
+    StatusCode oldStatus = _status;
+
+    // Only proceed with the update if nothing went wrong.
+    // Otherwise the update will be halted.
+    if (error == QNetworkReply::NoError) {
+        // Extract the server response and file checksum
+        QString rawData = reply->readAll();
+        rawData.replace(QRegExp("\\nDTSTAMP:[^\\n]+\\n"), "");
+        int newChecksum = qChecksum(rawData.toUtf8(), rawData.length());
+        _status = Online;
+
+        // Compare checksums to see if a reload is necessary
+        if (_calChecksum != newChecksum && rawData != "") {
+            _bufferLock.lock();
+
+            // Flush and repopulate the cache
+            flushCalendarCache();
+            importCalendarData(rawData);
+
+            // Notify the view on file changes, unless it's our initial load
+            if (_calChecksum != 0)
+                emit calendarChanged(this);
+
+            _calChecksum = newChecksum;
+            _bufferLock.unlock();
+
+            // Send out our first batch of notifications
+            sendNotifications();
+        }
+    } else {
+        // In the event of a download error, set the calendar to Offline.
+        _status = Offline;
+        if (oldStatus == NotLoaded)
+            emit formatNotRecognized(this);
     }
 
-    // Extract the server response and file checksum
-    QString rawData = reply->readAll();
-    rawData.replace(QRegExp("\\nDTSTAMP:[^\\n]+\\n"), "");
-    int newChecksum = qChecksum(rawData.toUtf8(), rawData.length());
-
-    // Compare checksums to see if a reload is necessary
-    if (_calChecksum != newChecksum && rawData != "") {
-        _bufferLock.lock();
-
-        // Flush and repopulate the cache
-        flushCalendarCache();
-        importCalendarData(rawData);
-
-        // Notify the view on file changes, unless it's our initial load
-        if (_calChecksum != 0)
-            emit calendarChanged(this);
-
-        _calChecksum = newChecksum;
-        _bufferLock.unlock();
-
-        // Send out our first batch of notifications
-        sendNotifications();
-    }
+    // If the calendar status changed, notify observers.
+    if (_status != oldStatus)
+        emit statusChanged(this);
 }
 
 void Calendar::importCalendarData(QString rawData)
@@ -189,8 +198,9 @@ void Calendar::importCalendarData(QString rawData)
     // If we don't have the ICS header, this is not a valid calendar
     if (rawData.indexOf("BEGIN:VCALENDAR") != 0) {
         _name = "Invalid Calendar";
+        _status = Offline;
         emit nameChanged(this);
-        emit calendarExceptionThrown(this, InvalidFormat);
+        emit formatNotRecognized(this);
         return;
     }
 
