@@ -16,7 +16,8 @@ SOURCES += main.cpp\
     model/calendardb.cpp \
     view/calendardbview.cpp \
     view/aptnotification.cpp \
-    view/inputbox.cpp
+    view/inputbox.cpp \
+    stringres.cpp
 
 HEADERS  += \
     model/appointment.h \
@@ -24,7 +25,12 @@ HEADERS  += \
     model/calendardb.h \
     view/calendardbview.h \
     view/aptnotification.h \
-    view/inputbox.h
+    view/inputbox.h \
+    stringres.h
 
 RESOURCES += \
     resources.qrc
+
+debug {
+    DEFINES += DEBUG
+}

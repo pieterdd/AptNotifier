@@ -57,7 +57,6 @@ private:
     QMap<QListWidgetItem*, Calendar*> _widItems;
     QSystemTrayIcon _trayIcon;
     QMenu _trayMenu;
-    QString _trayLabel;
     bool _allCalsOnline;
 
     // Notification-related data
@@ -98,6 +97,9 @@ private slots:
 
     /** Removes the calendars that are currently selected in the list. */
     void removeSelectedCalendars();
+
+    /** Forces a global calendar update. */
+    void updateCalendars();
 };
 
 #endif // CALENDARDBVIEW_H

@@ -1,6 +1,7 @@
 #include "calendardbview.h"
 
 #include "inputbox.h"
+#include "stringres.h"
 #include "aptnotification.h"
 #include "model/calendardb.h"
 #include "model/appointment.h"
@@ -13,14 +14,13 @@
 CalendarDBView::CalendarDBView(CalendarDB *calDB, QWidget *parent)
     : QMainWindow(parent)
 {
+    assert(_calDB);
     _nfySpawnY = 0;
     _calDB = calDB;
-    _trayLabel = "AptNotifier";
     _allCalsOnline = true;
     setupGUI();
 
     // Load the calendar list from a file
-    _trayIcon.showMessage("AptNotifier", "Your calendars are being loaded...", QSystemTrayIcon::Information, 1000);
     _calDB->loadCalendars();
 }
 
@@ -40,9 +40,10 @@ CalendarDBView::~CalendarDBView()
 
 void CalendarDBView::setupGUI()
 {
+    assert(_calDB);
     connect(_calDB, SIGNAL(newCalendarAdded(Calendar*)), this, SLOT(registerCalendar(Calendar*)));
     connect(_calDB, SIGNAL(removingCalendar(Calendar*)), this, SLOT(unregisterCalendar(Calendar*)));
-    setWindowTitle("AptNotifier (" + QString(__DATE__) + ")");
+    setWindowTitle(StringRes::appName() + " " + StringRes::appVersion());
 
     // Set up button group
     connect(&_btnAdd, SIGNAL(clicked()), this, SLOT(showNewCalendarDialog()));
@@ -65,11 +66,13 @@ void CalendarDBView::setupGUI()
 
     // Tray icon
     _trayIcon.setIcon(QIcon(":/general/appointment.png"));
-    _trayIcon.setToolTip(_trayLabel);
+    _trayIcon.setToolTip(StringRes::appName());
     _trayIcon.show();
     QAction* showWindow = _trayMenu.addAction("Show window");
+    QAction* updateAll = _trayMenu.addAction("Update all");
     QAction* quitAct = _trayMenu.addAction("Quit");
     connect(showWindow, SIGNAL(triggered()), this, SLOT(show()));
+    connect(updateAll, SIGNAL(triggered()), this, SLOT(updateCalendars()));
     connect(quitAct, SIGNAL(triggered()), this, SLOT(close()));
     _trayIcon.setContextMenu(&_trayMenu);
 }
@@ -122,7 +125,7 @@ void CalendarDBView::refreshCalUpdateStatus()
         if (curCal->status() != Calendar::Online) {
             _allCalsOnline = false;
             setWindowIcon(QIcon(":/general/appointmentgrey.png"));
-            _trayIcon.setToolTip(_trayLabel + " -- Some calendars are offline.");
+            _trayIcon.setToolTip(StringRes::appName() + " -- Some calendars are offline.");
             _trayIcon.setIcon(QIcon(":/general/appointmentgrey.png"));
         }
     }
@@ -130,7 +133,7 @@ void CalendarDBView::refreshCalUpdateStatus()
     // All found calendars are online, we're good to go.
     if (_allCalsOnline) {
         setWindowIcon(QIcon(":/general/appointment.png"));
-        _trayIcon.setToolTip(_trayLabel);
+        _trayIcon.setToolTip(StringRes::appName());
         _trayIcon.setIcon(QIcon(":/general/appointment.png"));
     }
 
@@ -293,4 +296,11 @@ void CalendarDBView::removeSelectedCalendars()
         Calendar* cal = _widItems[widgetItem];
         _calDB->removeCalendar(cal);
     }
+}
+
+void CalendarDBView::updateCalendars()
+{
+    _trayIcon.showMessage(StringRes::appName(), "Hang on while we refresh your calendars...");
+    assert(_calDB);
+    _calDB->updateCalendars();
 }

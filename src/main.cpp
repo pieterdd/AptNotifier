@@ -13,6 +13,5 @@ int main(int argc, char *argv[])
     CalendarDBView calDBView(&calDB);
     calDBView.hide();
     
-    int returnCode = a.exec();
-    return returnCode;
+    return a.exec();
 }

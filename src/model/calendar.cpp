@@ -157,13 +157,23 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
     if (error == QNetworkReply::NoError) {
         // Extract the server response and file checksum
         QString rawData = reply->readAll();
-        rawData.replace(QRegExp("\\nDTSTAMP:[^\\n]+\\n"), "");
+        rawData.replace("\r\n", "\n");
+        rawData.replace(QRegExp("\\nDTSTAMP:[^\\n]+\\n"), "\n");
+        rawData.replace(QRegExp("\nATTENDEE;[^\n]+\n( [^\n]+\n)*"), "\n");
+        rawData.replace(QRegExp("\nATTENDEE;[^\n]+\n( [^\n]+\n)*"), "\n");  // Do it a second time to deal with overlaps
         int newChecksum = qChecksum(rawData.toUtf8(), rawData.length());
         _status = Online;
 
         // Compare checksums to see if a reload is necessary
         if (_calChecksum != newChecksum && rawData != "") {
             _bufferLock.lock();
+
+            // TODO DEBUG: write changed calendar to disk.
+            QFile debugFile(_name + "-" + QDateTime::currentDateTime().toString("yyyyMMdd-hhmmss"));
+            if (!debugFile.open(QIODevice::WriteOnly | QIODevice::Text))
+                return;
+            debugFile.write(rawData.toLocal8Bit());
+            debugFile.close();
 
             // Flush and repopulate the cache
             flushCalendarCache();
@@ -208,7 +218,7 @@ void Calendar::importCalendarData(QString rawData)
     int calNamePos = rawData.indexOf("X-WR-CALNAME:");
     if (calNamePos != -1) {
         _name = rawData.mid(calNamePos + 13);
-        _name = _name.left(_name.indexOf("\r\n"));
+        _name = _name.left(_name.indexOf("\n"));
         emit nameChanged(this);
     }
 
@@ -233,7 +243,7 @@ void Calendar::importCalendarData(QString rawData)
                 int triggerPos = calInfo.indexOf("TRIGGER:-P");
                 while (triggerPos != -1) {
                     QString triggerInfo = calInfo.mid(triggerPos + 10);
-                    triggerInfo = triggerInfo.left(triggerInfo.indexOf("\r\n"));
+                    triggerInfo = triggerInfo.left(triggerInfo.indexOf("\n"));
 
                     // Only add reminder times that haven't passed yet
                     QDateTime reminderStamp = determineReminderStamp(newApt.start(), triggerInfo);

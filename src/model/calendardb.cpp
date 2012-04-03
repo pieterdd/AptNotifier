@@ -7,7 +7,11 @@
 CalendarDB::CalendarDB()
 {
     _refreshInterval = 1;
-    scheduleUpdate();
+
+    // Timer setup
+    connect(&_autoUpdate, SIGNAL(timeout()), this, SLOT(updateCalendars()));
+    _autoUpdate.setInterval(_refreshInterval*1000*60);
+    _autoUpdate.start();
 }
 
 CalendarDB::~CalendarDB()
@@ -109,19 +113,15 @@ void CalendarDB::writeCalendars()
     file.close();
 }
 
-void CalendarDB::scheduleUpdate()
-{
-    QTimer::singleShot(_refreshInterval*1000*60, this, SLOT(updateCalendars()));
-}
-
 void CalendarDB::updateCalendars()
 {
-    // Run the update command on all calendars
     _calLock.lock();
+    _autoUpdate.stop();
+
+    // Run the update command on all calendars
     foreach (Calendar* item, _calendars)
         item->update();
-    _calLock.unlock();
 
-    // Schedule the next update
-    scheduleUpdate();
+    _autoUpdate.start(_autoUpdate.interval());
+    _calLock.unlock();
 }

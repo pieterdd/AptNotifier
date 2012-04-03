@@ -44,9 +44,13 @@ private:
     QLinkedList<Calendar*> _calendars;
     QMutex _calLock;
 
+    /* Update triggers */
+    QTimer _autoUpdate;
+    QMutex _autoUpdateLock;
+
     /** Number of minutes to wait before refreshing all calendars */
     int _refreshInterval;
-private slots:
+public slots:
     /** Updates all calendars. If a calendar file hasn't changed (as determined
       * by the checksum), its buffers will not be re-populated. */
     void updateCalendars();

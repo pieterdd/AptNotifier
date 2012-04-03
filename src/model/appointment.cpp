@@ -65,7 +65,7 @@ void Appointment::parseSummary(const QString &rawData) {
 
     // Parse the summary, taking escape characters into account
     QString input = rawData.mid(beginPos+8);
-    _summary = input.left(input.indexOf("\r\n"));
+    _summary = input.left(input.indexOf("\n"));
     _summary = _summary.replace("\\,", ",");
     _summary = _summary.replace("\\n", "\n");
     _summary = _summary.replace("\\;", ";");
