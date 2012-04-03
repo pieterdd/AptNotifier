@@ -169,12 +169,14 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
         if (_calChecksum != newChecksum && rawData != "") {
             _bufferLock.lock();
 
+#ifdef DEBUG
             // TODO DEBUG: write changed calendar to disk.
             QFile debugFile(_name + "-" + QDateTime::currentDateTime().toString("yyyyMMdd-hhmmss"));
             if (!debugFile.open(QIODevice::WriteOnly | QIODevice::Text))
                 return;
             debugFile.write(rawData.toLocal8Bit());
             debugFile.close();
+#endif
 
             // Flush and repopulate the cache
             flushCalendarCache();
