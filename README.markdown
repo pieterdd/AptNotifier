@@ -3,7 +3,7 @@ Description
 
 AptNotifier (pronounced *Appointment Notifier*) is an application that helps you keep track of your calendar by notifying you about upcoming and ongoing events. It is written in C++ and depends on the Qt library. Since Qt is available for all major platforms, AptNotifier works on Windows, Linux and Mac.
 
-For an up-to-date list of the current limitations of AptNotifier, check our [https://github.com/pieterdd/AptNotifier/issues](issue tracker).
+For an up-to-date list of the current limitations of AptNotifier, check our [issue tracker](https://github.com/pieterdd/AptNotifier/issues).
 
 
 License
