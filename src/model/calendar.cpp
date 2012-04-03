@@ -159,8 +159,9 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
         QString rawData = reply->readAll();
         rawData.replace("\r\n", "\n");
         rawData.replace(QRegExp("\\nDTSTAMP:[^\\n]+\\n"), "\n");
-        rawData.replace(QRegExp("\nATTENDEE;[^\n]+\n( [^\n]+\n)*"), "\n");
-        rawData.replace(QRegExp("\nATTENDEE;[^\n]+\n( [^\n]+\n)*"), "\n");  // Do it a second time to deal with overlaps
+        rawData.replace(QRegExp("\\nATTENDEE(;|:)[^\\n]+\\n( [^\\n]+\\n)*"), "\n");
+        rawData.replace(QRegExp("\\nATTENDEE(;|:)[^\\n]+\\n( [^\\n]+\\n)*"), "\n");  // Do it a second time to deal with
+                                                                                 // successive ATTENDEE attributes
         int newChecksum = qChecksum(rawData.toUtf8(), rawData.length());
         _status = Online;
 
