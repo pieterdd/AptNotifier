@@ -157,12 +157,14 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
     if (error == QNetworkReply::NoError) {
         // Extract the server response and file checksum
         QString rawData = reply->readAll();
-        rawData.replace("\r\n", "\n");
+        rawData.replace("\r", "");
         rawData.replace(QRegExp("\\nDTSTAMP:[^\\n]+\\n"), "\n");
-        rawData.replace(QRegExp("\\nATTENDEE(;|:)[^\\n]+\\n( [^\\n]+\\n)*"), "\n");
-        rawData.replace(QRegExp("\\nATTENDEE(;|:)[^\\n]+\\n( [^\\n]+\\n)*"), "\n");  // Do it a second time to deal with
-                                                                                 // successive ATTENDEE attributes
-        int newChecksum = qChecksum(rawData.toUtf8(), rawData.length());
+
+        // Calculate the calendar checksum, but exclude certain attributes
+        QString checksumData = rawData;
+        checksumData.replace(QRegExp("\\nTRIGGER(;|:)[^\\n]+\\n"), "\n");
+        checksumData.replace(QRegExp("\\nATTENDEE(;|:)[^\\n]+\\n( [^\\n]+\\n)*"), "\n");
+        int newChecksum = qChecksum(checksumData.toUtf8(), checksumData.length());
         _status = Online;
 
         // Compare checksums to see if a reload is necessary
@@ -170,11 +172,11 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
             _bufferLock.lock();
 
 #ifdef DEBUG
-            // TODO DEBUG: write changed calendar to disk.
+            // Write changed calendar to disk.
             QFile debugFile(_name + "-" + QDateTime::currentDateTime().toString("yyyyMMdd-hhmmss"));
             if (!debugFile.open(QIODevice::WriteOnly | QIODevice::Text))
                 return;
-            debugFile.write(rawData.toLocal8Bit());
+            debugFile.write(checksumData.toLocal8Bit());
             debugFile.close();
 #endif
 

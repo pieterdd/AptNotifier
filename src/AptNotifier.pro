@@ -31,6 +31,6 @@ HEADERS  += \
 RESOURCES += \
     resources.qrc
 
-debug {
+CONFIG(debug, debug|release) {
     DEFINES += DEBUG
 }
