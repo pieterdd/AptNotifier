@@ -158,12 +158,13 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
         // Extract the server response and file checksum
         QString rawData = reply->readAll();
         rawData.replace("\r", "");
-        rawData.replace(QRegExp("\\nDTSTAMP:[^\\n]+\\n"), "\n");
 
         // Calculate the calendar checksum, but exclude certain attributes
         QString checksumData = rawData;
+        checksumData.replace(QRegExp("\\nDTSTAMP:[^\\n]+\\n"), "\n");
         checksumData.replace(QRegExp("\\nTRIGGER(;|:)[^\\n]+\\n"), "\n");
         checksumData.replace(QRegExp("\\nATTENDEE(;|:)[^\\n]+\\n( [^\\n]+\\n)*"), "\n");
+        checksumData.replace(QRegExp("\\nBEGIN:VALARM\\n(?:(?!END:VALARM)(.|\\n))*\\nEND:VALARM\\n"), "\n");
         int newChecksum = qChecksum(checksumData.toUtf8(), checksumData.length());
         _status = Online;
 
