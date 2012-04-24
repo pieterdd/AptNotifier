@@ -164,7 +164,7 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
         checksumData.replace(QRegExp("\\nDTSTAMP:[^\\n]+\\n"), "\n");
         checksumData.replace(QRegExp("\\nTRIGGER(;|:)[^\\n]+\\n"), "\n");
         checksumData.replace(QRegExp("\\nATTENDEE(;|:)[^\\n]+\\n( [^\\n]+\\n)*"), "\n");
-        checksumData.replace(QRegExp("\\nBEGIN:VALARM\\n(?:(?!END:VALARM)(.|\\n))*\\nEND:VALARM\\n"), "\n");
+        checksumData.replace(QRegExp("BEGIN:VALARM\n(?:(?!\nEND:VALARM)(.|\n))*\nEND:VALARM\n"), "");
         int newChecksum = qChecksum(checksumData.toUtf8(), checksumData.length());
         _status = Online;
 
