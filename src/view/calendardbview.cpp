@@ -5,6 +5,8 @@
 #include "aptnotification.h"
 #include "model/calendardb.h"
 #include "model/appointment.h"
+#include "view/toaster/toaster.h"
+#include "view/toaster/appointmentlist.h"
 #include <cassert>
 #include <QMetaType>
 #include <QMessageBox>
@@ -15,7 +17,6 @@ CalendarDBView::CalendarDBView(CalendarDB *calDB, QWidget *parent)
     : QMainWindow(parent)
 {
     assert(_calDB);
-    _nfySpawnY = 0;
     _calDB = calDB;
     _allCalsOnline = true;
     setupGUI();
@@ -26,16 +27,6 @@ CalendarDBView::CalendarDBView(CalendarDB *calDB, QWidget *parent)
 
 CalendarDBView::~CalendarDBView()
 {
-    // Close all open notifications. They will be deallocated by a signal
-    // that gets triggered when the notification is closed.
-    QMap<int, AptNotification*>::iterator begin;
-    do {
-        _nfyStackLock.lock();
-        begin = _nfyStack.begin();
-        if (begin != _nfyStack.end())
-            begin.value()->close();
-        _nfyStackLock.unlock();
-    } while (begin != _nfyStack.end());
 }
 
 void CalendarDBView::setupGUI()
@@ -77,19 +68,10 @@ void CalendarDBView::setupGUI()
     _trayIcon.setContextMenu(&_trayMenu);
 }
 
-void CalendarDBView::createNotification(Calendar* cal, const QString &title, const QLinkedList<Appointment> &list)
+void CalendarDBView::createAptListToaster(Calendar* cal, const QString &title, const QLinkedList<Appointment> &list)
 {
-    _nfyStackLock.lock();
-
-    // Add a new notification window to the stack
-    AptNotification* aptNfy = new AptNotification(cal, title, list, _nfyStack.size());
-    connect(aptNfy, SIGNAL(notificationClosed(AptNotification*)), this, SLOT(notificationClosed(AptNotification*)));
-    _nfyStack[_nfyStack.size()] = aptNfy;
-
-    _nfyStackLock.unlock();
-
-    // Activate the window
-    aptNfy->show();
+    Toaster* toast = new Toaster(title, new AppointmentList(cal, list));
+    _tm.add(toast);
 }
 
 void CalendarDBView::updateCalendarLabel(Calendar *cal)
@@ -208,12 +190,12 @@ void CalendarDBView::unregisterCalendar(Calendar* cal)
 
 void CalendarDBView::processNewOngoingAptEvents(Calendar *cal, const QLinkedList<Appointment> &list)
 {
-    createNotification(cal, "Now in progress", list);
+    createAptListToaster(cal, "Now in progress", list);
 }
 
 void CalendarDBView::processReminders(Calendar *cal, const QLinkedList<Appointment>& list)
 {
-    createNotification(cal, "Event reminder", list);
+    createAptListToaster(cal, "Event reminder", list);
 }
 
 void CalendarDBView::showInvalidCalendarFormatError(Calendar* cal)
@@ -236,42 +218,6 @@ void CalendarDBView::showNewCalendarDialog()
     if (returnCode == QDialog::Accepted) {
         _calDB->addCalendar(newCalDialog.inputValue(), _calDB->composeNextColor());
     }
-}
-
-void CalendarDBView::notificationClosed(AptNotification* aptNfy)
-{
-    bool passedNfy = false;
-    int lastKey = 0;
-
-    // Reorder the notification stack accordingly
-    _nfyStackLock.lock();
-    QMap<int, AptNotification*>::iterator it = _nfyStack.begin();
-
-    // TODO: stacking produces unexpected results in
-    // a test with 3 calendars generating notifications
-    // simultaneously
-    while (it != _nfyStack.end()) {
-        AptNotification* curNfy = it.value();
-
-        // Found notification window?
-        if (curNfy == aptNfy) {
-            passedNfy = true;
-            aptNfy->deleteLater();
-            lastKey = it.key();
-            it = _nfyStack.erase(it);
-        }
-        // All subsequent windows need to be moved to the front
-        else if (passedNfy) {
-            assert(!_nfyStack.contains(lastKey));
-            _nfyStack[lastKey] = curNfy;
-            lastKey = it.key();
-            it = _nfyStack.erase(it);
-            curNfy->setStackPosition(lastKey);
-        } else
-            ++it;
-    }
-
-    _nfyStackLock.unlock();
 }
 
 void CalendarDBView::updateBtnRemoveState()

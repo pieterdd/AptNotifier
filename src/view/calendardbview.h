@@ -9,6 +9,7 @@
 
 #include "model/calendar.h"
 #include "model/appointment.h"
+#include "view/toaster/toastmanager.h"
 #include <QMap>
 #include <QMenu>
 #include <QMutex>
@@ -33,7 +34,7 @@ private:
     void setupGUI();
 
     /** Creates a notification with a certain title and the appointments in the supplied list. */
-    void createNotification(Calendar* cal, const QString& title, const QLinkedList<Appointment>& list);
+    void createAptListToaster(Calendar* cal, const QString& title, const QLinkedList<Appointment>& list);
 
     /** Updates the name tag of a certain calendar in the list widget. */
     void updateCalendarLabel(Calendar* cal);
@@ -60,9 +61,7 @@ private:
     bool _allCalsOnline;
 
     // Notification-related data
-    QMutex _nfyStackLock;
-    QMap<int, AptNotification*> _nfyStack;
-    int _nfySpawnY;
+    ToastManager _tm;
 private slots:
     /** Invokes calendar import dialog to add a new calendar. */
     void showNewCalendarDialog();
@@ -87,10 +86,6 @@ private slots:
 
     /** Shows an Invalid Calendar error for a given calendar. */
     void showInvalidCalendarFormatError(Calendar* cal);
-
-    /** When a notification dialog closes, we need to react to this
-      * to make the notification stacking mechanism work. */
-    void notificationClosed(AptNotification* aptNfy);
 
     /** Updates the 'Remove' button state in response to a selection change. */
     void updateBtnRemoveState();

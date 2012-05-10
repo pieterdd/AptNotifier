@@ -17,7 +17,11 @@ SOURCES += main.cpp\
     view/calendardbview.cpp \
     view/aptnotification.cpp \
     view/inputbox.cpp \
-    stringres.cpp
+    stringres.cpp \
+    view/toaster/toaster.cpp \
+    view/toaster/appointmentlist.cpp \
+    view/toaster/infowidget.cpp \
+    view/toaster/toastmanager.cpp
 
 HEADERS  += \
     model/appointment.h \
@@ -26,7 +30,11 @@ HEADERS  += \
     view/calendardbview.h \
     view/aptnotification.h \
     view/inputbox.h \
-    stringres.h
+    stringres.h \
+    view/toaster/toaster.h \
+    view/toaster/appointmentlist.h \
+    view/toaster/infowidget.h \
+    view/toaster/toastmanager.h
 
 RESOURCES += \
     resources.qrc

@@ -3,4 +3,7 @@
         <file>appointment.png</file>
         <file>appointmentgrey.png</file>
     </qresource>
+    <qresource prefix="/bg">
+        <file>toaster.png</file>
+    </qresource>
 </RCC>

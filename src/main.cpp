@@ -15,3 +15,15 @@ int main(int argc, char *argv[])
     
     return a.exec();
 }
+
+//#include "view/toaster/toaster.h"
+//#include "view/toaster/appointmentlist.h"
+
+//int main(int argc, char* argv[]) {
+//    QApplication a(argc, argv);
+
+//    Toaster tst("Ongoing Event", new AppointmentList(NULL, QLinkedList<Appointment>()));
+//    tst.show();
+
+//    return a.exec();
+//}
