@@ -2,7 +2,6 @@
 
 #include "inputbox.h"
 #include "stringres.h"
-#include "aptnotification.h"
 #include "model/calendardb.h"
 #include "model/appointment.h"
 #include "view/toaster/toaster.h"

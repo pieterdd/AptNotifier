@@ -15,7 +15,6 @@ SOURCES += main.cpp\
     model/calendar.cpp \
     model/calendardb.cpp \
     view/calendardbview.cpp \
-    view/aptnotification.cpp \
     view/inputbox.cpp \
     stringres.cpp \
     view/toaster/toaster.cpp \
@@ -28,7 +27,6 @@ HEADERS  += \
     model/calendar.h \
     model/calendardb.h \
     view/calendardbview.h \
-    view/aptnotification.h \
     view/inputbox.h \
     stringres.h \
     view/toaster/toaster.h \
