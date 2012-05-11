@@ -1,10 +1,3 @@
-/**
- * \class Calendar
- * \author Pieter De Decker
- *
- * \brief Stores a list of appointments.
- */
-
 #ifndef CALENDAR_H
 #define CALENDAR_H
 
@@ -25,6 +18,10 @@ class Appointment;
 class QNetworkReply;
 class QNetworkAccessManager;
 
+/**
+  * Stores a list of appointments.
+  * \author Pieter De Decker
+  */
 class Calendar : public QObject
 {
     Q_OBJECT
@@ -55,6 +52,11 @@ public:
     /** [THREAD-SAFE] Triggers a refresh of the calendar. */
     void update();
 
+    /** This function is used by view classes to draw a border around
+      * a calendar image. Since this image is resized often, we have
+      * to add the border right before showing the image on screen.
+      */
+    static void drawBorder(QImage& img, int thickness, const QColor& color);
 private slots:
     /** [THREAD-SAFE] Analyses the downloaded calendar file and rebuilds the cache if the
       * checksum of the file has changed. */
@@ -69,6 +71,9 @@ private slots:
 private:
     /** Creates the pixmap for this calendar based on the color. */
     void buildCalendarImage();
+
+    /** Fills a rectangle area in an image with a color. */
+    static void fillRectangle(QImage& img, unsigned x, unsigned y, unsigned w, unsigned h, const QColor& color);
 
     /** Clears all appointments and reminders. */
     void flushCalendarCache();

@@ -1,9 +1,3 @@
-/**
- * \class Appointment
- * \author Pieter De Decker
- *
- * \brief Stores details of a calendar event.
- */
 #ifndef APPOINTMENT_H
 #define APPOINTMENT_H
 
@@ -11,6 +5,10 @@
 
 class QString;
 
+/**
+  * Stores details of a calendar event.
+  * \author Pieter De Decker
+  */
 class Appointment
 {
 public:

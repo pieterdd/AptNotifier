@@ -132,7 +132,9 @@ void CalendarDBView::registerCalendar(Calendar* cal)
 
     // Create new widget item. The list widget takes ownership, so no need to delete.
     _calsLock.lock();
-    QListWidgetItem* newItem = new QListWidgetItem(QIcon(QPixmap::fromImage(cal->image()).scaledToHeight(_calList.height())), cal->name());
+    QImage calImg = cal->image().scaledToHeight(_calList.height());
+    Calendar::drawBorder(calImg, 1, QColor(0, 0, 0));
+    QListWidgetItem* newItem = new QListWidgetItem(QIcon(QPixmap::fromImage(calImg)), cal->name());
     _calList.addItem(newItem);
     _calItems[cal] = newItem;
     _widItems[newItem] = cal;

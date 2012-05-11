@@ -1,9 +1,3 @@
-/**
-  * \class CalendarDB
-  * \author Pieter De Decker
-  *
-  * \brief Manages a list of calendars.
-  */
 #ifndef CALENDARDB_H
 #define CALENDARDB_H
 
@@ -14,6 +8,10 @@
 #include <QString>
 #include <QLinkedList>
 
+/**
+  * Manages a list of calendars.
+  * \author Pieter De Decker
+  */
 class CalendarDB : public QObject
 {
     Q_OBJECT

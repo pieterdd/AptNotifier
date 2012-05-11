@@ -1,9 +1,3 @@
-/**
-  * \class InputBox
-  * \author Pieter De Decker
-  *
-  * \brief Simple dialog asking for text input. A regex can be supplied for form validation.
-  */
 #ifndef INPUTBOX_H
 #define INPUTBOX_H
 
@@ -14,6 +8,10 @@
 #include <QVBoxLayout>
 #include <QDialogButtonBox>
 
+/**
+  * Simple dialog asking for text input. A regex can be supplied for form validation.
+  * \author Pieter De Decker
+  */
 class InputBox : public QDialog
 {
     Q_OBJECT

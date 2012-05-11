@@ -39,6 +39,14 @@ void Calendar::update()
     _naMgr.get(QNetworkRequest(_url));
 }
 
+void Calendar::drawBorder(QImage &img, int thickness, const QColor &color) {
+    assert(thickness < img.width() && thickness < img.height());
+    fillRectangle(img, 0, 0, img.width(), thickness, color);                               // Top
+    fillRectangle(img, img.width() - thickness, 0, thickness, img.height(), color);        // Right
+    fillRectangle(img, 0, img.height() - thickness, img.width(), thickness, color);        // Bottom
+    fillRectangle(img, 0, 0, thickness, img.height(), color);                              // Left
+}
+
 void Calendar::sendNotifications()
 {
     _bufferLock.lock();
@@ -121,11 +129,10 @@ void Calendar::sendNotifications_Reminders()
 
 void Calendar::buildCalendarImage()
 {
-    // TODO: we'll probably transition to a fairly neutral
-    // calendar image and colorize it later.
     _image = QImage(IMAGEDIM, IMAGEDIM, QImage::Format_RGB32);
     _image.fill(_color.rgb());
 
+    // Create gradient
     for (unsigned row = 0; row < (unsigned)IMAGEDIM; ++row) {
         QRgb* curline = (QRgb*)_image.scanLine(row);
 
@@ -137,6 +144,15 @@ void Calendar::buildCalendarImage()
 
             curline[col] = newColor.rgb();
         }
+    }
+}
+
+void Calendar::fillRectangle(QImage &img, unsigned x, unsigned y, unsigned w, unsigned h, const QColor& color) {
+    for (unsigned row = y; row < y + h; ++row) {
+        QRgb* curline = (QRgb*)img.scanLine(row);
+
+        for (unsigned col = x; col < x + w; ++col)
+            curline[col] = color.rgb();
     }
 }
 

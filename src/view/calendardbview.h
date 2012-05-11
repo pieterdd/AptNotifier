@@ -1,9 +1,3 @@
-/**
- * CalendarDBView
- * \author Pieter De Decker
- *
- * \brief Main application window. Also serves as the View counterpart to CalendarDB.
- */
 #ifndef CALENDARDBVIEW_H
 #define CALENDARDBVIEW_H
 
@@ -23,6 +17,10 @@ class CalendarDB;
 class AptNotification;
 class QListWidgetItem;
 
+/**
+  * Main application window. Also serves as the View counterpart to CalendarDB.
+  * \author Pieter De Decker
+  */
 class CalendarDBView : public QMainWindow
 {
     Q_OBJECT

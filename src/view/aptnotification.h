@@ -1,4 +1,5 @@
 /**
+  * TODO: deprecated
   * \class AptNotification
   * \author Pieter De Decker
   *

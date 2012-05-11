@@ -33,10 +33,12 @@ private:
 
     // Layout
     QVBoxLayout _vlMain;
+    QHBoxLayout _hlCal;
     QHBoxLayout _hlBottom;
 
     // Controls
     QLabel _lblAppointment;
+    QLabel _lblCalImg;
     QLabel _lblCalName;
     QPushButton _btnNext;
 

@@ -13,7 +13,7 @@ void AppointmentList::start() {
     nextSlide();
     connect(&_nfyTimer, SIGNAL(timeout()), this, SLOT(nextSlide()));
     _nfyTimer.setSingleShot(true);
-    _nfyTimer.start(5000);
+    _nfyTimer.start(7000);
 }
 
 void AppointmentList::nextSlide() {
@@ -21,8 +21,7 @@ void AppointmentList::nextSlide() {
     if (_nextAptIt != _aptList.end()) {
         const Appointment& apt = *_nextAptIt;
         QString start = Appointment::composeShortDateTime(apt.start());
-        _lblAppointment.setText(start + " " + apt.summary());
-        _lblCalName.setText(_cal->name());
+        _lblAppointment.setText(start + " <b>" + apt.summary() + "</b>");
         ++_nextAptIt;
         _nfyTimer.start();
 
@@ -37,12 +36,25 @@ void AppointmentList::nextSlide() {
 }
 
 void AppointmentList::setupGUI() {
-    setLayout(&_vlMain);
-    _vlMain.addWidget(&_lblAppointment);
-    _vlMain.addWidget(&_lblCalName);
+    // Calendar layout
+    QImage calImg = _cal->image().scaledToHeight(14);
+    Calendar::drawBorder(calImg, 1, QColor(25, 25, 25));
+    _lblCalImg.setPixmap(QPixmap::fromImage(calImg));
+    _lblCalName.setText(_cal->name());
+    _hlCal.addWidget(&_lblCalImg);
+    _hlCal.addWidget(&_lblCalName);
+    _hlCal.addSpacerItem(new QSpacerItem(1, 0, QSizePolicy::Expanding));
+
+    // Bottom layout
     _btnNext.setText(">");
     connect(&_btnNext, SIGNAL(clicked()), this, SLOT(nextSlide()));
     _hlBottom.addSpacerItem(new QSpacerItem(1, 0, QSizePolicy::Expanding));
     _hlBottom.addWidget(&_btnNext);
+
+    // Main layout
+    setLayout(&_vlMain);
+    _vlMain.addWidget(&_lblAppointment);
+    _vlMain.addLayout(&_hlCal);
+    _vlMain.addSpacerItem(new QSpacerItem(0, 1, QSizePolicy::Expanding));
     _vlMain.addLayout(&_hlBottom);
 }
