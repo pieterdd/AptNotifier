@@ -15,3 +15,4 @@ Acknowledgements
 ================
 
 - [Gnome Project](http://www.iconfinder.com/icondetails/55237/48/48_appointment_gnome_soon_icon) for the system tray icon
+- [Jack Cai](http://findicons.com/icon/177418/clock_red?id=333998#) for the calendar icon on the toaster messages
