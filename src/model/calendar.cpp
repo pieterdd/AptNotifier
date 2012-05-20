@@ -181,6 +181,11 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
         int newChecksum = qChecksum(checksumData.toUtf8(), checksumData.length());
         _status = Online;
 
+        // If we can't checksum because Last Modified attributes are unavailable,
+        // fall back on regular file checksumming.
+        if (newChecksum == 0)
+            newChecksum = qChecksum(rawData.toUtf8(), rawData.length());
+
         // Compare checksums to see if a reload is necessary
         if (_calChecksum != newChecksum && rawData != "") {
             _bufferLock.lock();
@@ -190,7 +195,7 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
             QFile debugFile(_name + "-" + QDateTime::currentDateTime().toString("yyyyMMdd-hhmmss"));
             if (!debugFile.open(QIODevice::WriteOnly | QIODevice::Text))
                 return;
-            debugFile.write(checksumData.toLocal8Bit());
+            debugFile.write(rawData.toLocal8Bit());
             debugFile.close();
 #endif
 
