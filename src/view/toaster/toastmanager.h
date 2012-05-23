@@ -17,10 +17,10 @@ public:
     ToastManager();
     ~ToastManager();
 
-    /** Pop on a new toaster message. This class takes ownership of it. */
+    /** [THREAD-SAFE] Pop on a new toaster message. This class takes ownership of it. */
     void add(Toaster* toast);
 public slots:
-    /** Closes and removes a certain toaster message. */
+    /** [THREAD-SAFE] Closes and removes a certain toaster message. */
     void remove(Toaster* toast);
 private:
     /** Updates the position of a certain toast message to reflect
