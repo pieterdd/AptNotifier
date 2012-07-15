@@ -1,11 +1,13 @@
 #ifndef CALENDAR_H
 #define CALENDAR_H
 
+#include "logger.h"
 #include <QUrl>
 #include <QColor>
 #include <QTimer>
 #include <QImage>
 #include <QMutex>
+#include <QDebug>
 #include <QString>
 #include <QObject>
 #include <QMetaType>
@@ -43,11 +45,21 @@ public:
 
     /* Getters */
     QString url() const { return (QString)_url.toEncoded(); }
-    const QString& name() const { return _name; }
+    QString name() {     // This getter requires thread sync
+        engageBufferLock("getting name attribute");
+        QString retVal = _name;
+        releaseBufferLock("got name attribute");
+        return retVal;
+    }
     const QColor& color() const { return _color; }
     const QImage& image() const { return _image; }
     static short getTimeShift() { return Calendar::timeShift; }
-    StatusCode status() const { return _status; }
+    StatusCode status() {       // This getter requires thread sync
+        engageBufferLock("getting status attribute");
+        StatusCode retVal = _status;
+        releaseBufferLock("got status attribute");
+        return retVal;
+    }
 
     /** [THREAD-SAFE] Triggers a refresh of the calendar. */
     void update();
@@ -57,6 +69,19 @@ public:
       * to add the border right before showing the image on screen.
       */
     static void drawBorder(QImage& img, int thickness, const QColor& color);
+
+    /** [THREAD-SAFE] String representation generator. Do not use this internally where
+      * _bufferLock has been engaged, this will block the program! QString concatenation
+      * will not engage _bufferLock and can be used internally. */
+    QString toString() {
+        QString retVal;
+
+        engageBufferLock("making string representation");
+        retVal = toString_Internal();   // TODO
+        releaseBufferLock("made string representation");
+
+        return retVal;
+    }
 private slots:
     /** [THREAD-SAFE] Analyses the downloaded calendar file and rebuilds the cache if the
       * checksum of the file has changed. */
@@ -69,6 +94,25 @@ private slots:
     void sendNotifications_Ongoing();
     void sendNotifications_Reminders();
 private:
+    static const char* CLASSNAME;
+
+    /** Convenience alias for operator+(QString, Calendar). NOT thread-safe. */
+    QString toString_Internal() {
+        QString result;
+        operator +(result, *this);
+        return result;
+    }
+
+    /** Thread-unsafe QString concatenator for Calendar. To be used internally with appropriate thread
+      * synchronization only. */
+    friend QString& operator+(QString& str, Calendar& cal) {
+        if (cal._status == Calendar::NotLoaded)
+            str += cal.url();
+        else
+            str += cal._name;
+        return str;
+    }
+
     /** Creates the pixmap for this calendar based on the color. */
     void buildCalendarImage();
 
@@ -78,7 +122,8 @@ private:
     /** Clears all appointments and reminders. */
     void flushCalendarCache();
 
-    /** Parses an ICS file and extracts appointments with their reminders. */
+    /** Parses an ICS file and extracts appointments with their reminders. The buffer lock MUST
+      * already be engaged when this function is called! */
     void importCalendarData(QString rawData);
 
     /** Determines the reminder timestamp of an appointment based on the appointment
@@ -90,13 +135,23 @@ private:
       * that have non-integer timezone shifts. */
     static short calcTimeShift();
 
+    /** [THREAD-SAFE] Helper: engages _bufferLock and writes status info about this to the log. */
+    void engageBufferLock(const QString& reason);
+
+    /** [THREAD-SAFE] Helper: releases _bufferLock and writes status info about this to the log. */
+    void releaseBufferLock(const QString& reason);
+
     QUrl _url;
     QString _name;
-    int _calChecksum;
     QColor _color;
     QImage _image;
     QTimer _nfyTimer;
     QNetworkAccessManager _naMgr;
+
+    /** Holds a hash that helps detect changes in new calendars. */
+    int _calChecksum;
+
+    /** Represents the current state of the calendar. */
     enum StatusCode _status;
 
     /** Contains all appointments that aren't ongoing. Sorted on start time. */
@@ -108,7 +163,7 @@ private:
     /** Contains all ongoing appointments. */
     QLinkedList<Appointment> _ongoingApts;
 
-    /** Mutex for all the aforementioned buffers. */
+    /** Mutex for all the aforementioned buffers, _status and _calChecksum. */
     QMutex _bufferLock;
 
     static short timeShift;

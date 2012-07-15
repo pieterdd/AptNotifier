@@ -12,6 +12,7 @@
 
 short Calendar::timeShift = Calendar::calcTimeShift();
 const short Calendar::IMAGEDIM = 64;
+const char* Calendar::CLASSNAME = "Calendar";
 
 Calendar::Calendar(const QString &url, const QColor &color)
     : _naMgr(this)
@@ -36,6 +37,7 @@ void Calendar::update()
 {
     // Start calendar download asynchronously. After retrieving the
     // file, parseNetworkResponse will take over.
+    Logger::instance()->add(CLASSNAME, "Fetching update for object 0x" + QString::number((unsigned)this, 16) + "...");
     _naMgr.get(QNetworkRequest(_url));
 }
 
@@ -49,7 +51,7 @@ void Calendar::drawBorder(QImage &img, int thickness, const QColor &color) {
 
 void Calendar::sendNotifications()
 {
-    _bufferLock.lock();
+    engageBufferLock("sending out notifications");
 
     // First get the ongoing appointment notifications out the door,
     // then process the reminders.
@@ -59,7 +61,7 @@ void Calendar::sendNotifications()
     // Check notifications again in half a minute
     QTimer::singleShot(30000, this, SLOT(sendNotifications()));
 
-    _bufferLock.unlock();
+    releaseBufferLock("sent out notifications");
 }
 
 void Calendar::sendNotifications_Ongoing()
@@ -158,6 +160,9 @@ void Calendar::fillRectangle(QImage &img, unsigned x, unsigned y, unsigned w, un
 
 void Calendar::flushCalendarCache()
 {
+    // This function is not thread-safe on itself, so make sure that you obtain
+    // a lock in the calling function.
+    Logger::instance()->add(CLASSNAME, "Flushing cache for object 0x" + QString::number((unsigned)this, 16));
     _appointments.clear();
     _reminders.clear();
     _ongoingApts.clear();
@@ -165,6 +170,7 @@ void Calendar::flushCalendarCache()
 
 void Calendar::parseNetworkResponse(QNetworkReply* reply)
 {
+    engageBufferLock("parsing network response");
     QNetworkReply::NetworkError error = reply->error();
     StatusCode oldStatus = _status;
 
@@ -188,13 +194,12 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
 
         // Compare checksums to see if a reload is necessary
         if (_calChecksum != newChecksum && rawData != "") {
-            _bufferLock.lock();
-
+            Logger::instance()->add(CLASSNAME, "Change was detected for " + this->toString_Internal() + ".");
 #ifdef DEBUG
             // Write changed calendar to disk.
             QFile debugFile(_name + "-" + QDateTime::currentDateTime().toString("yyyyMMdd-hhmmss"));
             if (!debugFile.open(QIODevice::WriteOnly | QIODevice::Text))
-                return;
+                abort();
             debugFile.write(rawData.toLocal8Bit());
             debugFile.close();
 #endif
@@ -204,37 +209,46 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
             importCalendarData(rawData);
 
             // Notify the view on file changes, unless it's our initial load
-            if (_calChecksum != 0)
+            if (_calChecksum != 0) {
+                releaseBufferLock("preparing observer notifications");
                 emit calendarChanged(this);
+                engageBufferLock("notified observers");
+            }
 
             _calChecksum = newChecksum;
-            _bufferLock.unlock();
 
             // Send out our first batch of notifications
+            releaseBufferLock("ended update");
             sendNotifications();
+        } else {
+            releaseBufferLock("ended update");
         }
     } else {
         // In the event of a download error, set the calendar to Offline.
         _status = Offline;
+        releaseBufferLock("ended update");
         if (oldStatus == NotLoaded)
             emit formatNotRecognized(this);
     }
 
     // If the calendar status changed, notify observers.
-    if (_status != oldStatus)
+    if (status() != oldStatus)
         emit statusChanged(this);
 }
 
 void Calendar::importCalendarData(QString rawData)
 {
     QDateTime now = QDateTime::currentDateTime();
+    Logger::instance()->add(CLASSNAME, "Importing calendar changes for " + this->toString_Internal() + ".");
 
     // If we don't have the ICS header, this is not a valid calendar
     if (rawData.indexOf("BEGIN:VCALENDAR") != 0) {
         _name = "Invalid Calendar";
         _status = Offline;
+        releaseBufferLock("preparing observer notifications");
         emit nameChanged(this);
         emit formatNotRecognized(this);
+        engageBufferLock("notified observers");
         return;
     }
 
@@ -243,7 +257,9 @@ void Calendar::importCalendarData(QString rawData)
     if (calNamePos != -1) {
         _name = rawData.mid(calNamePos + 13);
         _name = _name.left(_name.indexOf("\n"));
+        releaseBufferLock("preparing observer notifications");
         emit nameChanged(this);
+        engageBufferLock("notified observers");
     }
 
     // Loop until all events are cached
@@ -327,4 +343,17 @@ short Calendar::calcTimeShift() {
         abort();
         return 0;
     }
+}
+
+void Calendar::engageBufferLock(const QString& reason = "no reason given")
+{
+    Logger::instance()->add(CLASSNAME, "Requesting buffer lock for object 0x" + QString::number((unsigned)this, 16) + " (" + reason + ")");
+    _bufferLock.lock();
+    Logger::instance()->add(CLASSNAME, "Activated buffer lock for object 0x" + QString::number((unsigned)this, 16) + " (" + reason + ")");
+}
+
+void Calendar::releaseBufferLock(const QString &reason)
+{
+    _bufferLock.unlock();
+    Logger::instance()->add(CLASSNAME, "Released buffer lock for object 0x" + QString::number((unsigned)this, 16) + " (" + reason + ")");
 }

@@ -1,7 +1,7 @@
 #include "calendardbview.h"
 
 #include "inputbox.h"
-#include "stringres.h"
+#include "model/logger.h"
 #include "model/calendardb.h"
 #include "model/appointment.h"
 #include "view/toaster/toaster.h"
@@ -11,11 +11,14 @@
 #include <QMessageBox>
 #include <QListWidgetItem>
 #include <QtConcurrentRun>
+#include <QCoreApplication>
+
+const char* CalendarDBView::CLASSNAME = "CalendarDBView";
 
 CalendarDBView::CalendarDBView(CalendarDB *calDB, QWidget *parent)
     : QMainWindow(parent)
 {
-    assert(_calDB);
+    assert(calDB);
     _calDB = calDB;
     _allCalsOnline = true;
     setupGUI();
@@ -33,7 +36,7 @@ void CalendarDBView::setupGUI()
     assert(_calDB);
     connect(_calDB, SIGNAL(newCalendarAdded(Calendar*)), this, SLOT(registerCalendar(Calendar*)));
     connect(_calDB, SIGNAL(removingCalendar(Calendar*)), this, SLOT(unregisterCalendar(Calendar*)));
-    setWindowTitle(StringRes::appName() + " " + StringRes::appVersion());
+    setWindowTitle(QCoreApplication::applicationName() + " " + QCoreApplication::applicationVersion());
 
     // Set up button group
     connect(&_btnAdd, SIGNAL(clicked()), this, SLOT(showNewCalendarDialog()));
@@ -56,7 +59,7 @@ void CalendarDBView::setupGUI()
 
     // Tray icon
     _trayIcon.setIcon(QIcon(":/general/appointment.png"));
-    _trayIcon.setToolTip(StringRes::appName());
+    _trayIcon.setToolTip(QCoreApplication::applicationName());
     _trayIcon.show();
     QAction* showWindow = _trayMenu.addAction("Show window");
     QAction* updateAll = _trayMenu.addAction("Update all");
@@ -69,6 +72,7 @@ void CalendarDBView::setupGUI()
 
 void CalendarDBView::createAptListToaster(Calendar* cal, const QString &title, const QLinkedList<Appointment> &list)
 {
+    Logger::instance()->add(CLASSNAME, "Creating toaster" + title + "for calendar" + cal->name() + "...");
     Toaster* toast = new Toaster(title, new AppointmentList(cal, list));
     _tm.add(toast);
 }
@@ -97,6 +101,7 @@ void CalendarDBView::updateCalendarLabel(Calendar *cal)
 void CalendarDBView::refreshCalUpdateStatus()
 {
     _calsLock.lock();
+    Logger::instance()->add(CLASSNAME, "Refreshing calendar updates statuses...");
 
     // Are all known calendars now online?
     _allCalsOnline = true;
@@ -106,7 +111,7 @@ void CalendarDBView::refreshCalUpdateStatus()
         if (curCal->status() != Calendar::Online) {
             _allCalsOnline = false;
             setWindowIcon(QIcon(":/general/appointmentgrey.png"));
-            _trayIcon.setToolTip(StringRes::appName() + " -- Some calendars are offline.");
+            _trayIcon.setToolTip(QCoreApplication::applicationName() + " -- Some calendars are offline.");
             _trayIcon.setIcon(QIcon(":/general/appointmentgrey.png"));
         }
     }
@@ -114,7 +119,7 @@ void CalendarDBView::refreshCalUpdateStatus()
     // All found calendars are online, we're good to go.
     if (_allCalsOnline) {
         setWindowIcon(QIcon(":/general/appointment.png"));
-        _trayIcon.setToolTip(StringRes::appName());
+        _trayIcon.setToolTip(QCoreApplication::applicationName());
         _trayIcon.setIcon(QIcon(":/general/appointment.png"));
     }
 
@@ -131,6 +136,7 @@ void CalendarDBView::registerCalendar(Calendar* cal)
 
     // Create new widget item. The list widget takes ownership, so no need to delete.
     _calsLock.lock();
+    Logger::instance()->add(CLASSNAME, "Registering calendar with URL " + cal->url() + "...");
     QImage calImg = cal->image().scaledToHeight(_calList.height());
     Calendar::drawBorder(calImg, 1, QColor(0, 0, 0));
     QListWidgetItem* newItem = new QListWidgetItem(QIcon(QPixmap::fromImage(calImg)), cal->name());
@@ -167,6 +173,7 @@ void CalendarDBView::processCalendarStatusChange(Calendar *cal)
 void CalendarDBView::unregisterCalendar(Calendar* cal)
 {
     _calsLock.lock();
+    Logger::instance()->add(CLASSNAME, "Unregistering calendar " + cal->name() + "...");
 
     // Search for the associated QListWidgetItem and associated iterators
     QMap<Calendar*, QListWidgetItem*>::iterator calIt = _calItems.find(cal);
@@ -247,7 +254,7 @@ void CalendarDBView::removeSelectedCalendars()
 
 void CalendarDBView::updateCalendars()
 {
-    _trayIcon.showMessage(StringRes::appName(), "Hang on while we refresh your calendars...");
+    _trayIcon.showMessage(QCoreApplication::applicationName(), "Hang on while we refresh your calendars...");
     assert(_calDB);
     _calDB->updateCalendars();
 }

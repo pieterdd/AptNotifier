@@ -20,7 +20,8 @@ SOURCES += main.cpp\
     view/toaster/toaster.cpp \
     view/toaster/appointmentlist.cpp \
     view/toaster/infowidget.cpp \
-    view/toaster/toastmanager.cpp
+    view/toaster/toastmanager.cpp \
+    model/logger.cpp
 
 HEADERS  += \
     model/appointment.h \
@@ -32,7 +33,8 @@ HEADERS  += \
     view/toaster/toaster.h \
     view/toaster/appointmentlist.h \
     view/toaster/infowidget.h \
-    view/toaster/toastmanager.h
+    view/toaster/toastmanager.h \
+    model/logger.h
 
 RESOURCES += \
     resources.qrc

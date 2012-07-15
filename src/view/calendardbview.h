@@ -28,6 +28,8 @@ public:
     CalendarDBView(CalendarDB* calDB, QWidget *parent = 0);
     ~CalendarDBView();
 private:
+    static const char* CLASSNAME;
+
     /** Configures controls and connections in the GUI. */
     void setupGUI();
 

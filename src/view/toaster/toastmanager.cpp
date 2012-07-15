@@ -1,9 +1,12 @@
 #include "toastmanager.h"
 
+#include "model/logger.h"
 #include "view/toaster/toaster.h"
 #include <cassert>
 #include <QApplication>
 #include <QDesktopWidget>
+
+const char* ToastManager::CLASSNAME = "ToastManager";
 
 ToastManager::ToastManager()
 {
@@ -16,6 +19,7 @@ ToastManager::~ToastManager() {
 
 void ToastManager::add(Toaster *toast) {
     _nfyStackLock.lock();
+    Logger::instance()->add(CLASSNAME, "Adding toaster...");
 
     // Add a new notification window to the stack
     connect(toast, SIGNAL(notificationCanBeClosed(Toaster*)), this, SLOT(remove(Toaster*)));
@@ -30,6 +34,7 @@ void ToastManager::add(Toaster *toast) {
 }
 
 void ToastManager::remove(Toaster *toast) {
+    Logger::instance()->add(CLASSNAME, "Removing toaster...");
     bool passedNfy = false;
     int lastKey = 0;
 
@@ -61,6 +66,7 @@ void ToastManager::remove(Toaster *toast) {
             ++it;
     }
 
+    Logger::instance()->add(CLASSNAME, "Updated toaster hierarchy.");
     _nfyStackLock.unlock();
 }
 

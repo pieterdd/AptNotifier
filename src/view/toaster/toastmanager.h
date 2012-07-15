@@ -23,6 +23,8 @@ public slots:
     /** [THREAD-SAFE] Closes and removes a certain toaster message. */
     void remove(Toaster* toast);
 private:
+    static const char* CLASSNAME;
+
     /** Updates the position of a certain toast message to reflect
       * its place in the stack. */
     void moveToaster(Toaster* toast, int position);

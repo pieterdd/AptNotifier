@@ -1,8 +1,11 @@
 #include "calendardb.h"
 
+#include "logger.h"
 #include "calendar.h"
 #include <QFile>
 #include <QTextStream>
+
+const char* CalendarDB::CLASSNAME = "CalendarDB";
 
 CalendarDB::CalendarDB()
 {
@@ -27,6 +30,7 @@ CalendarDB::~CalendarDB()
 void CalendarDB::loadCalendars()
 {
     QFile file("calendars");
+    Logger::instance()->add(CLASSNAME, "Opening calendar file...");
 
     if (!file.open(QIODevice::ReadOnly))
         return;
@@ -38,18 +42,19 @@ void CalendarDB::loadCalendars()
 
         QString line = file.readLine();
         line = line.trimmed();
+        Logger::instance()->add(CLASSNAME, "Detected calendar " + line + ".");
         addCalendar(line, calColor, false);
     }
 }
 
 void CalendarDB::addCalendar(const QString &url, const QColor &color, bool writeChange)
 {
-
     // Create new calendar, trigger its first update
     Calendar* newCalendar = new Calendar(url, color);
     _calLock.lock();
     _calendars.push_back(newCalendar);
     emit newCalendarAdded(newCalendar);
+    Logger::instance()->add(CLASSNAME, "Added calendar " + newCalendar->toString());
     newCalendar->update();
     _calLock.unlock();
 
@@ -97,6 +102,7 @@ QColor CalendarDB::composeNextColor()
 void CalendarDB::writeCalendars()
 {
     QFile file("calendars");
+    Logger::instance()->add(CLASSNAME, "Writing calendar list to disk...");
 
     // Open file output
     if (!file.open(QIODevice::WriteOnly))
@@ -116,6 +122,7 @@ void CalendarDB::writeCalendars()
 void CalendarDB::updateCalendars()
 {
     _calLock.lock();
+    Logger::instance()->add(CLASSNAME, "Updating all calendars...");
     _autoUpdate.stop();
 
     // Run the update command on all calendars

@@ -32,6 +32,8 @@ public:
     /** Composes the color for the next calendar by varying the hue. */
     QColor composeNextColor();
 private:
+    static const char* CLASSNAME;
+
     /** Writes the current list of calendars to disk. */
     void writeCalendars();
 
