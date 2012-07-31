@@ -21,7 +21,8 @@ SOURCES += main.cpp\
     view/toaster/appointmentlist.cpp \
     view/toaster/infowidget.cpp \
     view/toaster/toastmanager.cpp \
-    model/logger.cpp
+    model/logger.cpp \
+    model/aptcache.cpp
 
 HEADERS  += \
     model/appointment.h \
@@ -34,7 +35,8 @@ HEADERS  += \
     view/toaster/appointmentlist.h \
     view/toaster/infowidget.h \
     view/toaster/toastmanager.h \
-    model/logger.h
+    model/logger.h \
+    model/aptcache.h
 
 RESOURCES += \
     resources.qrc

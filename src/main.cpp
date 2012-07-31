@@ -14,11 +14,11 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 #ifndef DEBUG
-    a.setApplicationName("AptNotifier");
+    QCoreApplication::setApplicationName("AptNotifier");
 #else
-    a.setApplicationName("AptNotifier DEBUG");
+    QCoreApplication::setApplicationName("AptNotifier DEBUG");
 #endif
-    a.setApplicationVersion("-- Test version");
+    QCoreApplication::setApplicationVersion("-- Test version");
 
     CalendarDB calDB;
     CalendarDBView calDBView(&calDB);

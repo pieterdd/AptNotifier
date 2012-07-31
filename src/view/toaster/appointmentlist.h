@@ -29,7 +29,7 @@ private slots:
     void nextSlide();
 private:
     /** Constructs GUI, wires components. */
-    void setupGUI();
+    void setupGUI(Calendar* cal);
 
     // Layout
     QVBoxLayout _vlMain;
@@ -43,7 +43,6 @@ private:
     QPushButton _btnNext;
 
     // Data
-    Calendar* _cal;
     QLinkedList<Appointment> _aptList;
 
     // Notification cycling timer

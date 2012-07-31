@@ -1,5 +1,6 @@
 #include "calendar.h"
 
+#include "aptcache.h"
 #include "appointment.h"
 #include <cmath>
 #include <QFile>
@@ -23,6 +24,7 @@ Calendar::Calendar(const QString &url, const QColor &color)
     _calChecksum = 0;
     _color = color;
     _status = NotLoaded;
+    _aptCache = new AptCache();
     buildCalendarImage();
 
     // Wire QObjects
@@ -31,6 +33,7 @@ Calendar::Calendar(const QString &url, const QColor &color)
 }
 
 Calendar::~Calendar() {
+    delete _aptCache;
 }
 
 void Calendar::update()
@@ -51,8 +54,6 @@ void Calendar::drawBorder(QImage &img, int thickness, const QColor &color) {
 
 void Calendar::sendNotifications()
 {
-    engageBufferLock("sending out notifications");
-
     // First get the ongoing appointment notifications out the door,
     // then process the reminders.
     sendNotifications_Ongoing();
@@ -60,51 +61,19 @@ void Calendar::sendNotifications()
 
     // Check notifications again in half a minute
     QTimer::singleShot(30000, this, SLOT(sendNotifications()));
-
-    releaseBufferLock("sent out notifications");
 }
 
 void Calendar::sendNotifications_Ongoing()
 {
-    QDateTime now = QDateTime::currentDateTime();
-    now = now.addSecs(-now.time().second());
-    QLinkedList<Appointment> newOngoing;
-
-    // Remove appointments that are no longer ongoing
-    for (QLinkedList<Appointment>::iterator it = _ongoingApts.begin();
-         it != _ongoingApts.end(); ++it) {
-        const Appointment& apt = *it;
-
-        if (apt.end() < now)
-            it = _ongoingApts.erase(it);
-    }
-
-    // Collect newly ongoing appointments and transfer them to a separate list
-    bool foundAllNewlyOngoing = false;
-    QMultiMap<QDateTime, Appointment>::iterator it = _appointments.begin();
-    while (it != _appointments.end() && !foundAllNewlyOngoing) {
-        const Appointment& apt = it.value();
-
-        // Stop searching if the selected appointment hasn't started yet
-        if (now < apt.start()) {
-            foundAllNewlyOngoing = true;
-        }
-        // Transfer ongoing appointments to a separate data structure
-        else if (apt.start() <= now && now <= apt.end()) {
-            // Add it to the ongoing list and the "new" list
-            _ongoingApts.push_back(apt);
-            newOngoing.push_back(_ongoingApts.last());
-
-            // Remove it from the appointment list
-            it = _appointments.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    // Update the list of ongoing appointments
+    engageBufferLock("updating ongoing appointment list");
+    QLinkedList<Appointment> newOngoing = _aptCache->updateOngoingApts();
+    releaseBufferLock("updated ongoing appointment list");
 
     // Broadcast new ongoing appointments to observers
-    if (newOngoing.size() > 0)
+    if (newOngoing.size() > 0) {
         emit newOngoingAppointments(this, newOngoing);
+    }
 }
 
 void Calendar::sendNotifications_Reminders()
@@ -116,17 +85,56 @@ void Calendar::sendNotifications_Reminders()
     // Get the list of reminders that are dated at this minute and
     // erase them from reminder storage
     QLinkedList<Appointment> reminders;
-    QMap<QDateTime, Appointment>::iterator it = _reminders.find(now);
+    engageBufferLock("accessing/updating reminders list");
+    QMap<QDateTime, Appointment>::iterator it = _aptCache->reminders()->find(now);
 
     // Collect all reminders dated to now
-    while (it != _reminders.end() && it.key() == now) {
+    while (it != _aptCache->reminders()->end() && it.key() == now) {
         reminders.push_back(*it);
-        it = _reminders.erase(it);
+        it = _aptCache->reminders()->erase(it);
     }
+    releaseBufferLock("finished accessing reminders list");
 
     // Broadcast new reminders to observers
     if (reminders.count() > 0)
         emit newReminders(this, reminders);
+}
+
+int Calendar::calChecksum() {
+    int retVal;
+    engageBufferLock("accessing calendar checksum");
+    retVal = _calChecksum;
+    releaseBufferLock("accessed calendar checksum");
+
+    return retVal;
+}
+
+void Calendar::setCalChecksum(int calChecksum) {
+    engageBufferLock("updating calendar checksum");
+    _calChecksum = calChecksum;
+    releaseBufferLock("updated calendar checksum");
+}
+
+void Calendar::setName(const QString& name) {
+    engageBufferLock("updating name to " + name);
+    _name = name;
+    releaseBufferLock("updated name");
+    emit nameChanged(this);
+}
+
+void Calendar::setStatus(StatusCode status) {
+    engageBufferLock("updating status to " + status);
+    _status = status;
+    releaseBufferLock("updated status");
+    emit statusChanged(this);
+}
+
+QString& operator+(QString& str, Calendar& cal) {
+    if (cal._status == Calendar::NotLoaded)
+        str += cal.url();
+    else
+        str += cal._name;
+    return str;
 }
 
 void Calendar::buildCalendarImage()
@@ -158,21 +166,13 @@ void Calendar::fillRectangle(QImage &img, unsigned x, unsigned y, unsigned w, un
     }
 }
 
-void Calendar::flushCalendarCache()
-{
-    // This function is not thread-safe on itself, so make sure that you obtain
-    // a lock in the calling function.
-    Logger::instance()->add(CLASSNAME, "Flushing cache for object 0x" + QString::number((unsigned)this, 16));
-    _appointments.clear();
-    _reminders.clear();
-    _ongoingApts.clear();
-}
-
 void Calendar::parseNetworkResponse(QNetworkReply* reply)
 {
-    engageBufferLock("parsing network response");
+    Logger::instance()->add(CLASSNAME, "Got update response for 0x" + QString::number((unsigned)this, 16) + ".");
+
+    // Retrieve the current calendar status in a thread-safe way
+    StatusCode oldStatus = status();
     QNetworkReply::NetworkError error = reply->error();
-    StatusCode oldStatus = _status;
 
     // Only proceed with the update if nothing went wrong.
     // Otherwise the update will be halted.
@@ -185,7 +185,7 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
         QString checksumData = rawData;
         checksumData.replace(QRegExp("((^|\\n)(?!LAST-MODIFIED)[^\\n]*)+"), "");
         int newChecksum = qChecksum(checksumData.toUtf8(), checksumData.length());
-        _status = Online;
+        setStatus(Online);
 
         // If we can't checksum because Last Modified attributes are unavailable,
         // fall back on regular file checksumming.
@@ -193,113 +193,112 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
             newChecksum = qChecksum(rawData.toUtf8(), rawData.length());
 
         // Compare checksums to see if a reload is necessary
-        if (_calChecksum != newChecksum && rawData != "") {
-            Logger::instance()->add(CLASSNAME, "Change was detected for " + this->toString_Internal() + ".");
-#ifdef DEBUG
-            // Write changed calendar to disk.
-            QFile debugFile(_name + "-" + QDateTime::currentDateTime().toString("yyyyMMdd-hhmmss"));
-            if (!debugFile.open(QIODevice::WriteOnly | QIODevice::Text))
-                abort();
-            debugFile.write(rawData.toLocal8Bit());
-            debugFile.close();
-#endif
+        if (calChecksum() != newChecksum && rawData != "") {
+            Logger::instance()->add(CLASSNAME, "Change was detected for 0x" + QString::number((int)this, 16) + ".");
 
-            // Flush and repopulate the cache
-            flushCalendarCache();
-            importCalendarData(rawData);
+            // Construct our new appointment cache off the raw data. Then replace the old cache.
+            AptCache* aptCache = parseICSFile(rawData);
+            engageBufferLock("replacing old appointment cache");
+            delete _aptCache;
+            _aptCache = aptCache;
+            releaseBufferLock("installed new appointment cache");
 
             // Notify the view on file changes, unless it's our initial load
-            if (_calChecksum != 0) {
-                releaseBufferLock("preparing observer notifications");
+            if (calChecksum() != 0)
                 emit calendarChanged(this);
-                engageBufferLock("notified observers");
-            }
+            setCalChecksum(newChecksum);
 
-            _calChecksum = newChecksum;
-
-            // Send out our first batch of notifications
-            releaseBufferLock("ended update");
+            // Send out our first batch of notifications (thread-safe)
             sendNotifications();
-        } else {
-            releaseBufferLock("ended update");
         }
     } else {
         // In the event of a download error, set the calendar to Offline.
-        _status = Offline;
-        releaseBufferLock("ended update");
+        Logger::instance()->add(CLASSNAME, "Error fetching update for 0x" + QString::number((unsigned)this, 16) + ".");
+        setStatus(Offline);
         if (oldStatus == NotLoaded)
             emit formatNotRecognized(this);
     }
-
-    // If the calendar status changed, notify observers.
-    if (status() != oldStatus)
-        emit statusChanged(this);
 }
 
-void Calendar::importCalendarData(QString rawData)
-{
-    QDateTime now = QDateTime::currentDateTime();
-    Logger::instance()->add(CLASSNAME, "Importing calendar changes for " + this->toString_Internal() + ".");
+AptCache* Calendar::parseICSFile(QString rawData) {
+    Logger::instance()->add(CLASSNAME, "Importing calendar changes for 0x" + QString::number((int)this, 16) + ".");
 
     // If we don't have the ICS header, this is not a valid calendar
     if (rawData.indexOf("BEGIN:VCALENDAR") != 0) {
-        _name = "Invalid Calendar";
-        _status = Offline;
-        releaseBufferLock("preparing observer notifications");
-        emit nameChanged(this);
+        Logger::instance()->add(CLASSNAME, "Import of calendar 0x" + QString::number((int)this, 16) + " failed.");
+
+        setName("Invalid Calendar");
+        setStatus(Offline);
         emit formatNotRecognized(this);
-        engageBufferLock("notified observers");
-        return;
+
+        return NULL;
     }
 
     // Check if we can extract the calendar name
     int calNamePos = rawData.indexOf("X-WR-CALNAME:");
     if (calNamePos != -1) {
-        _name = rawData.mid(calNamePos + 13);
-        _name = _name.left(_name.indexOf("\n"));
-        releaseBufferLock("preparing observer notifications");
-        emit nameChanged(this);
-        engageBufferLock("notified observers");
+        QString name;
+        name = rawData.mid(calNamePos + 13);
+        setName(name.left(name.indexOf("\n")));
     }
+
+    // We've done our initial checks. Now let's fill that cache already!
+    AptCache* aptCache = new AptCache();
+    parseICSFile_FillAptCache(rawData, aptCache);
+
+    return aptCache;
+}
+
+void Calendar::parseICSFile_FillAptCache(QString &rawData, AptCache *aptCache) {
+    QDateTime now = QDateTime::currentDateTime();
 
     // Loop until all events are cached
-    bool eventsLeft = true;
-    while (eventsLeft) {
-        // Check if a new event can be extracted
-        int beginPos = rawData.indexOf("BEGIN:VEVENT");
-        int endPos = rawData.indexOf("END:VEVENT");
+    while (parseICSFile_EventsLeft(rawData)) {
+        QString calInfo = parseICSFile_GetRawApt(rawData);
+        Appointment newApt(calInfo);
 
-        if (beginPos == -1 || endPos == -1 || beginPos > endPos) {
-            eventsLeft = false;
-        } else {
-            QString calInfo = rawData.mid(beginPos, endPos - beginPos);
+        // Add the newly extracted appointment if it hasn't already ended
+        if (newApt.isValid() && now < newApt.end()) {
+            aptCache->appointments()->insert(newApt.start(), newApt);
 
-            // Add the newly extracted appointment if it hasn't already ended
-            Appointment newApt(calInfo);
-            if (newApt.isValid() && now < newApt.end()) {
-                _appointments.insert(newApt.start(), newApt);
+            // Create reminders where needed
+            int triggerPos = calInfo.indexOf("TRIGGER:-P");
+            while (triggerPos != -1) {
+                QString triggerInfo = calInfo.mid(triggerPos + 10);
+                triggerInfo = triggerInfo.left(triggerInfo.indexOf("\n"));
 
-                // Create reminders where needed
-                int triggerPos = calInfo.indexOf("TRIGGER:-P");
-                while (triggerPos != -1) {
-                    QString triggerInfo = calInfo.mid(triggerPos + 10);
-                    triggerInfo = triggerInfo.left(triggerInfo.indexOf("\n"));
+                // Only add reminder times that haven't passed yet
+                QDateTime reminderStamp = determineReminderStamp(newApt.start(), triggerInfo);
+                assert(reminderStamp.isValid());
+                if (now <= reminderStamp)
+                    aptCache->reminders()->insert(reminderStamp, newApt);
 
-                    // Only add reminder times that haven't passed yet
-                    QDateTime reminderStamp = determineReminderStamp(newApt.start(), triggerInfo);
-                    assert(reminderStamp.isValid());
-                    if (now <= reminderStamp)
-                        _reminders.insert(reminderStamp, newApt);
-
-                    calInfo = calInfo.mid(triggerPos + 10);
-                    triggerPos = calInfo.indexOf("TRIGGER:-P");
-                }
+                calInfo = calInfo.mid(triggerPos + 10);
+                triggerPos = calInfo.indexOf("TRIGGER:-P");
             }
-
-            // Prepare for next appointment
-            rawData = rawData.mid(endPos + 10);
         }
+
+        // Prepare for next appointment
+        rawData = rawData.mid(rawData.indexOf("END:VEVENT") + 10);
     }
+}
+
+bool Calendar::parseICSFile_EventsLeft(const QString& rawData) const {
+    int beginPos = rawData.indexOf("BEGIN:VEVENT");
+    int endPos = rawData.indexOf("END:VEVENT");
+
+    if (beginPos == -1 || endPos == -1 || beginPos > endPos)
+        return false;
+    else
+        return true;
+}
+
+QString Calendar::parseICSFile_GetRawApt(const QString& rawData) const {
+    int beginPos = rawData.indexOf("BEGIN:VEVENT");
+    int endPos = rawData.indexOf("END:VEVENT");
+    QString calInfo = rawData.mid(beginPos, endPos - beginPos);
+
+    return calInfo;
 }
 
 QDateTime Calendar::determineReminderStamp(const QDateTime &aptStart, const QString &triggerInfo)

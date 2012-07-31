@@ -1,10 +1,8 @@
 #include "appointmentlist.h"
 
 AppointmentList::AppointmentList(Calendar* cal, const QLinkedList<Appointment>& aptList) {
-    // TODO: _cal isn't used
-    _cal = cal;
     _aptList = aptList;
-    setupGUI();
+    setupGUI(cal);
 }
 
 void AppointmentList::start() {
@@ -35,12 +33,12 @@ void AppointmentList::nextSlide() {
     }
 }
 
-void AppointmentList::setupGUI() {
+void AppointmentList::setupGUI(Calendar* cal) {
     // Calendar layout
-    QImage calImg = _cal->image().scaledToHeight(14);
+    QImage calImg = cal->image().scaledToHeight(14);
     Calendar::drawBorder(calImg, 1, QColor(25, 25, 25));
     _lblCalImg.setPixmap(QPixmap::fromImage(calImg));
-    _lblCalName.setText(_cal->name());
+    _lblCalName.setText(cal->name());
     _hlCal.addWidget(&_lblCalImg);
     _hlCal.addWidget(&_lblCalName);
     _hlCal.addSpacerItem(new QSpacerItem(1, 0, QSizePolicy::Expanding));

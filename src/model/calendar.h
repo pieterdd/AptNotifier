@@ -16,12 +16,13 @@
 #include <QLinkedList>
 #include <QNetworkAccessManager>
 
+class AptCache;
 class Appointment;
 class QNetworkReply;
 class QNetworkAccessManager;
 
 /**
-  * Stores a list of appointments.
+  * Represents an online iCal calendar.
   * \author Pieter De Decker
   */
 class Calendar : public QObject
@@ -77,7 +78,7 @@ public:
         QString retVal;
 
         engageBufferLock("making string representation");
-        retVal = toString_Internal();   // TODO
+        operator +(retVal, *this);
         releaseBufferLock("made string representation");
 
         return retVal;
@@ -96,22 +97,21 @@ private slots:
 private:
     static const char* CLASSNAME;
 
-    /** Convenience alias for operator+(QString, Calendar). NOT thread-safe. */
-    QString toString_Internal() {
-        QString result;
-        operator +(result, *this);
-        return result;
-    }
+    /** [THREAD-SAFE] Getter for the calendar checksum. */
+    int calChecksum();
+
+    /** [THREAD-SAFE] Setter for the calendar checksum. */
+    void setCalChecksum(int calChecksum);
+
+    /** [THREAD-SAFE] Setter for the calendar name. Notifies observers afterwards. */
+    void setName(const QString& name);
+
+    /** [THREAD-SAFE] Setter for the status attribute. Notifies observers afterwards. */
+    void setStatus(StatusCode status);
 
     /** Thread-unsafe QString concatenator for Calendar. To be used internally with appropriate thread
       * synchronization only. */
-    friend QString& operator+(QString& str, Calendar& cal) {
-        if (cal._status == Calendar::NotLoaded)
-            str += cal.url();
-        else
-            str += cal._name;
-        return str;
-    }
+    friend QString& operator+(QString& str, Calendar& cal);
 
     /** Creates the pixmap for this calendar based on the color. */
     void buildCalendarImage();
@@ -119,12 +119,19 @@ private:
     /** Fills a rectangle area in an image with a color. */
     static void fillRectangle(QImage& img, unsigned x, unsigned y, unsigned w, unsigned h, const QColor& color);
 
-    /** Clears all appointments and reminders. */
-    void flushCalendarCache();
+    /** Given a raw ICS file, this function parses its contents and loads all relevant content into a new
+      * AptCache object. Ownership of this object is transferred over to the caller. May return NULL if
+      * import failed. */
+    AptCache* parseICSFile(QString rawData);
 
-    /** Parses an ICS file and extracts appointments with their reminders. The buffer lock MUST
-      * already be engaged when this function is called! */
-    void importCalendarData(QString rawData);
+    /** [HELPER] Loops over each VEVENT in rawData, adding new appointments to aptCache as they pop up. */
+    void parseICSFile_FillAptCache(QString& rawData, AptCache* aptCache);
+
+    /** [HELPER] Checks if at least one more VEVENT can be extracted from rawData. */
+    bool parseICSFile_EventsLeft(const QString& rawData) const;
+
+    /** [HELPER] Extracts the raw text of the next VEVENT from rawData. */
+    QString parseICSFile_GetRawApt(const QString& rawData) const;
 
     /** Determines the reminder timestamp of an appointment based on the appointment
       * time and the "TRIGGER" field. */
@@ -141,29 +148,24 @@ private:
     /** [THREAD-SAFE] Helper: releases _bufferLock and writes status info about this to the log. */
     void releaseBufferLock(const QString& reason);
 
-    QUrl _url;
+    QUrl _url;        /* Should not change after the constructor finishes! */
     QString _name;
     QColor _color;
     QImage _image;
     QTimer _nfyTimer;
     QNetworkAccessManager _naMgr;
 
-    /** Holds a hash that helps detect changes in new calendars. */
+    /** Holds a hash that helps detect changes in new calendars. _bufferLock required for access. */
     int _calChecksum;
 
-    /** Represents the current state of the calendar. */
+    /** Represents the current state of the calendar. _bufferLock required for access. */
     enum StatusCode _status;
 
-    /** Contains all appointments that aren't ongoing. Sorted on start time. */
-    QMultiMap<QDateTime, Appointment> _appointments;
+    /** Contains all ongoing appointments, future appointments and
+      * scheduled reminders. _bufferLock required for access. */
+    AptCache* _aptCache;
 
-    /** Contains all non-expired reminders with their requested alarm time. */
-    QMultiMap<QDateTime, Appointment> _reminders;
-
-    /** Contains all ongoing appointments. */
-    QLinkedList<Appointment> _ongoingApts;
-
-    /** Mutex for all the aforementioned buffers, _status and _calChecksum. */
+    /** Mutex for _aptCache, _status and _calChecksum. */
     QMutex _bufferLock;
 
     static short timeShift;
