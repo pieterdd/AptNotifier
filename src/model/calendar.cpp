@@ -40,8 +40,9 @@ void Calendar::update()
 {
     // Start calendar download asynchronously. After retrieving the
     // file, parseNetworkResponse will take over.
-    Logger::instance()->add(CLASSNAME, "Fetching update for object 0x" + QString::number((unsigned)this, 16) + "...");
+    Logger::instance()->add(CLASSNAME, "Fetching update for 0x" + QString::number((unsigned)this, 16) + "...");
     _naMgr.get(QNetworkRequest(_url));
+    Logger::instance()->add(CLASSNAME, "Update request for 0x" + QString::number((unsigned)this, 16) + " was filed.");
 }
 
 void Calendar::drawBorder(QImage &img, int thickness, const QColor &color) {
@@ -166,12 +167,16 @@ void Calendar::fillRectangle(QImage &img, unsigned x, unsigned y, unsigned w, un
     }
 }
 
-void Calendar::parseNetworkResponse(QNetworkReply* reply)
-{
+void Calendar::parseNetworkResponse(QNetworkReply* reply) {
+    // TODO: we suspect that sometimes a SIGSEGV occurs within the bounds
+    // of this function. We'll remove the excessive log calls when we've
+    // successfully tracked down the problem.
     Logger::instance()->add(CLASSNAME, "Got update response for 0x" + QString::number((unsigned)this, 16) + ".");
 
     // Retrieve the current calendar status in a thread-safe way
+    Logger::instance()->add(CLASSNAME, "Fetching current status for 0x" + QString::number((unsigned)this, 16) + "...");
     StatusCode oldStatus = status();
+    Logger::instance()->add(CLASSNAME, "Fetched current status for 0x" + QString::number((unsigned)this, 16) + "...");
     QNetworkReply::NetworkError error = reply->error();
 
     // Only proceed with the update if nothing went wrong.
@@ -186,6 +191,8 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
         checksumData.replace(QRegExp("((^|\\n)(?!LAST-MODIFIED)[^\\n]*)+"), "");
         int newChecksum = qChecksum(checksumData.toUtf8(), checksumData.length());
         setStatus(Online);
+
+        Logger::instance()->add(CLASSNAME, "Comparing update checksum for 0x" + QString::number((unsigned)this, 16) + "...");
 
         // If we can't checksum because Last Modified attributes are unavailable,
         // fall back on regular file checksumming.
@@ -218,6 +225,8 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply)
         if (oldStatus == NotLoaded)
             emit formatNotRecognized(this);
     }
+
+    Logger::instance()->add(CLASSNAME, "Finished updating 0x" + QString::number((unsigned)this, 16) + ".");
 }
 
 AptCache* Calendar::parseICSFile(QString rawData) {

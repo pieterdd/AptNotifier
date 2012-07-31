@@ -1,6 +1,5 @@
 #include <QtGui/QApplication>
 
-#include "stringres.h"
 #include "model/logger.h"
 #include "model/calendar.h"
 #include "model/calendardb.h"

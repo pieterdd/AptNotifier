@@ -16,7 +16,6 @@ SOURCES += main.cpp\
     model/calendardb.cpp \
     view/calendardbview.cpp \
     view/inputbox.cpp \
-    stringres.cpp \
     view/toaster/toaster.cpp \
     view/toaster/appointmentlist.cpp \
     view/toaster/infowidget.cpp \
@@ -30,7 +29,6 @@ HEADERS  += \
     model/calendardb.h \
     view/calendardbview.h \
     view/inputbox.h \
-    stringres.h \
     view/toaster/toaster.h \
     view/toaster/appointmentlist.h \
     view/toaster/infowidget.h \
