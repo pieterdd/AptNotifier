@@ -25,11 +25,17 @@ public:
     /** Activates the slide cycle timer. */
     void start();
 private slots:
+    // Returns to the previous appointment
+    void prevSlide();
+
     // Advances to the next appointment
     void nextSlide();
 private:
     /** Constructs GUI, wires components. */
     void setupGUI(Calendar* cal);
+
+    /** Loads a certain appointment into the GUI. */
+    void loadAppointment(QLinkedList<Appointment>::iterator it);
 
     // Layout
     QVBoxLayout _vlMain;
@@ -40,6 +46,7 @@ private:
     QLabel _lblAppointment;
     QLabel _lblCalImg;
     QLabel _lblCalName;
+    QPushButton _btnBack;
     QPushButton _btnNext;
 
     // Data
