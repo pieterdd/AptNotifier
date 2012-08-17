@@ -24,10 +24,8 @@ Logger* Logger::instance() {
 }
 
 void Logger::add(const QString& className, const QString& msg) {
-#ifdef DEBUG
     _fileLocker.lock();
     _fileStream << className + ": " + msg + "\n";
     _fileStream.flush();
     _fileLocker.unlock();
-#endif
 }

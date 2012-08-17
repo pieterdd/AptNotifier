@@ -161,8 +161,8 @@ private:
     /** Represents the current state of the calendar. _bufferLock required for access. */
     enum StatusCode _status;
 
-    /** Contains all ongoing appointments, future appointments and
-      * scheduled reminders. _bufferLock required for access. */
+    /** Contains all ongoing appointments, future appointments, scheduled reminders and
+      * the network access manager. _bufferLock required for access. */
     AptCache* _aptCache;
 
     /** Mutex for _aptCache, _status and _calChecksum. */

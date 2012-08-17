@@ -41,7 +41,9 @@ void Calendar::update()
     // Start calendar download asynchronously. After retrieving the
     // file, parseNetworkResponse will take over.
     Logger::instance()->add(CLASSNAME, "Fetching update for 0x" + QString::number((unsigned)this, 16) + "...");
+    _bufferLock.lock();
     _naMgr.get(QNetworkRequest(_url));
+    _bufferLock.unlock();
     Logger::instance()->add(CLASSNAME, "Update request for 0x" + QString::number((unsigned)this, 16) + " was filed.");
 }
 
@@ -176,7 +178,7 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply) {
     // Retrieve the current calendar status in a thread-safe way
     Logger::instance()->add(CLASSNAME, "Fetching current status for 0x" + QString::number((unsigned)this, 16) + "...");
     StatusCode oldStatus = status();
-    Logger::instance()->add(CLASSNAME, "Fetched current status for 0x" + QString::number((unsigned)this, 16) + "...");
+    Logger::instance()->add(CLASSNAME, "Fetched current status for 0x" + QString::number((unsigned)this, 16) + ".");
     QNetworkReply::NetworkError error = reply->error();
 
     // Only proceed with the update if nothing went wrong.
@@ -205,6 +207,9 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply) {
 
             // Construct our new appointment cache off the raw data. Then replace the old cache.
             AptCache* aptCache = parseICSFile(rawData);
+            if (!aptCache)
+                return;
+
             engageBufferLock("replacing old appointment cache");
             delete _aptCache;
             _aptCache = aptCache;
@@ -234,8 +239,8 @@ AptCache* Calendar::parseICSFile(QString rawData) {
 
     // If we don't have the ICS header, this is not a valid calendar
     if (rawData.indexOf("BEGIN:VCALENDAR") != 0) {
-        Logger::instance()->add(CLASSNAME, "Import of calendar 0x" + QString::number((int)this, 16) + " failed.");
-
+        Logger::instance()->add(CLASSNAME, "Import of 0x" + QString::number((int)this, 16) + " failed because it" +
+                                " isn't recognized as an ICS file.");
         setName("Invalid Calendar");
         setStatus(Offline);
         emit formatNotRecognized(this);
@@ -355,13 +360,19 @@ short Calendar::calcTimeShift() {
 
 void Calendar::engageBufferLock(const QString& reason = "no reason given")
 {
+#ifdef VERBOSELOCKING
     Logger::instance()->add(CLASSNAME, "Requesting buffer lock for object 0x" + QString::number((unsigned)this, 16) + " (" + reason + ")");
+#endif
     _bufferLock.lock();
+#ifdef VERBOSELOCKING
     Logger::instance()->add(CLASSNAME, "Activated buffer lock for object 0x" + QString::number((unsigned)this, 16) + " (" + reason + ")");
+#endif
 }
 
 void Calendar::releaseBufferLock(const QString &reason)
 {
     _bufferLock.unlock();
+#ifdef VERBOSELOCKING
     Logger::instance()->add(CLASSNAME, "Released buffer lock for object 0x" + QString::number((unsigned)this, 16) + " (" + reason + ")");
+#endif
 }

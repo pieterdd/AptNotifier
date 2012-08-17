@@ -72,7 +72,7 @@ void CalendarDBView::setupGUI()
 
 void CalendarDBView::createAptListToaster(Calendar* cal, const QString &title, const QLinkedList<Appointment> &list)
 {
-    Logger::instance()->add(CLASSNAME, "Creating toaster" + title + "for calendar" + cal->name() + "...");
+    Logger::instance()->add(CLASSNAME, "Creating toaster " + title + " for calendar" + cal->name() + "...");
     Toaster* toast = new Toaster(title, new AppointmentList(cal, list));
     _tm.add(toast);
 }
