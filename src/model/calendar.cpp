@@ -30,6 +30,10 @@ Calendar::Calendar(const QString &url, const QColor &color)
     // Wire QObjects
     connect(&_nfyTimer, SIGNAL(timeout()), this, SLOT(sendNotifications()));
     connect(&_naMgr, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
+    connect(&_naMgr, SIGNAL(authenticationRequired(QNetworkReply*,QAuthenticator*)), this, SLOT(parseNetworkResponse_Fail()));
+    connect(&_naMgr, SIGNAL(networkAccessibleChanged(QNetworkAccessManager::NetworkAccessibility)), this, SLOT(parseNetworkResponse_Fail()));
+    connect(&_naMgr, SIGNAL(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)), this, SLOT(parseNetworkResponse_Fail()));
+    connect(&_naMgr, SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)), this, SLOT(parseNetworkResponse_Fail()));
 }
 
 Calendar::~Calendar() {
@@ -232,6 +236,11 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply) {
     }
 
     Logger::instance()->add(CLASSNAME, "Finished updating 0x" + QString::number((unsigned)this, 16) + ".");
+}
+
+void Calendar::parseNetworkResponse_Fail() {
+    Logger::instance()->add(CLASSNAME, "Something went wrong while fetching an update for 0x" + QString::number((unsigned)this, 16) + ".");
+    emit formatNotRecognized(this);
 }
 
 AptCache* Calendar::parseICSFile(QString rawData) {

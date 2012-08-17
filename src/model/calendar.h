@@ -88,6 +88,9 @@ private slots:
       * checksum of the file has changed. */
     void parseNetworkResponse(QNetworkReply*);
 
+    /** [THREAD-SAFE] Called instead of parseNetworkResponse when something goes wrong. */
+    void parseNetworkResponse_Fail();
+
     /** [THREAD-SAFE] On regular intervals, this function is
       * called to trigger notifications about ongoing appointments
       * and reminders. */
