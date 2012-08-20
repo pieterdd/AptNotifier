@@ -17,6 +17,10 @@ private:
 public:
     static Logger* instance();
 
+    /** Opens log file for writing and writes header. Must be called before writing
+      * any log info! */
+    void initialize();
+
     /** [THREAD-SAFE] Writes a message to the log file. */
     void add(const QString& className, const QString &msg);
 private:
