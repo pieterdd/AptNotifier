@@ -86,7 +86,7 @@ public:
 private slots:
     /** [THREAD-SAFE] Analyses the downloaded calendar file and rebuilds the cache if the
       * checksum of the file has changed. */
-    void parseNetworkResponse(QNetworkReply*);
+    void parseNetworkResponse();
 
     /** [THREAD-SAFE] Called instead of parseNetworkResponse when something goes wrong. */
     void parseNetworkResponse_Fail();
@@ -157,6 +157,7 @@ private:
     QImage _image;
     QTimer _nfyTimer;
     QNetworkAccessManager _naMgr;
+    QNetworkReply* _naReply;
 
     /** Holds a hash that helps detect changes in new calendars. _bufferLock required for access. */
     int _calChecksum;

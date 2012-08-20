@@ -42,5 +42,3 @@ RESOURCES += \
 CONFIG(debug, debug|release) {
     DEFINES += DEBUG
 }
-
-DEFINES += VERBOSELOCKING

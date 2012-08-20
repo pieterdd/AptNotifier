@@ -25,28 +25,36 @@ Calendar::Calendar(const QString &url, const QColor &color)
     _color = color;
     _status = NotLoaded;
     _aptCache = new AptCache();
+    _naReply = NULL;
     buildCalendarImage();
 
     // Wire QObjects
     connect(&_nfyTimer, SIGNAL(timeout()), this, SLOT(sendNotifications()));
-    connect(&_naMgr, SIGNAL(finished(QNetworkReply*)), this, SLOT(parseNetworkResponse(QNetworkReply*)));
-    connect(&_naMgr, SIGNAL(authenticationRequired(QNetworkReply*,QAuthenticator*)), this, SLOT(parseNetworkResponse_Fail()));
-    connect(&_naMgr, SIGNAL(networkAccessibleChanged(QNetworkAccessManager::NetworkAccessibility)), this, SLOT(parseNetworkResponse_Fail()));
-    connect(&_naMgr, SIGNAL(proxyAuthenticationRequired(QNetworkProxy,QAuthenticator*)), this, SLOT(parseNetworkResponse_Fail()));
-    connect(&_naMgr, SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)), this, SLOT(parseNetworkResponse_Fail()));
 }
 
 Calendar::~Calendar() {
+    _naReply->deleteLater();
     delete _aptCache;
 }
 
 void Calendar::update()
 {
+    _bufferLock.lock();
+    QNetworkReply* reply = _naReply;
+    _bufferLock.unlock();
+
+    // Don't update if an active request exists
+    if (reply) {
+        Logger::instance()->add(CLASSNAME, "Skipping update for 0x" + QString::number((unsigned)this, 16) + " since an update is already in progress.");
+        return;
+    }
+
     // Start calendar download asynchronously. After retrieving the
     // file, parseNetworkResponse will take over.
     Logger::instance()->add(CLASSNAME, "Fetching update for 0x" + QString::number((unsigned)this, 16) + "...");
     _bufferLock.lock();
-    _naMgr.get(QNetworkRequest(_url));
+    _naReply = _naMgr.get(QNetworkRequest(_url));
+    connect(_naReply, SIGNAL(finished()), this, SLOT(parseNetworkResponse()));
     _bufferLock.unlock();
     Logger::instance()->add(CLASSNAME, "Update request for 0x" + QString::number((unsigned)this, 16) + " was filed.");
 }
@@ -173,7 +181,12 @@ void Calendar::fillRectangle(QImage &img, unsigned x, unsigned y, unsigned w, un
     }
 }
 
-void Calendar::parseNetworkResponse(QNetworkReply* reply) {
+void Calendar::parseNetworkResponse() {
+    _bufferLock.lock();
+    assert(_naReply);
+    QNetworkReply* reply = _naReply;
+    _bufferLock.unlock();
+
     // TODO: we suspect that sometimes a SIGSEGV occurs within the bounds
     // of this function. We'll remove the excessive log calls when we've
     // successfully tracked down the problem.
@@ -236,6 +249,12 @@ void Calendar::parseNetworkResponse(QNetworkReply* reply) {
     }
 
     Logger::instance()->add(CLASSNAME, "Finished updating 0x" + QString::number((unsigned)this, 16) + ".");
+
+    // Dispose update object
+    _bufferLock.lock();
+    _naReply->deleteLater();
+    _naReply = NULL;
+    _bufferLock.unlock();
 }
 
 void Calendar::parseNetworkResponse_Fail() {
