@@ -33,3 +33,7 @@ void Logger::add(const QString& className, const QString& msg) {
     _fileStream.flush();
     _fileLocker.unlock();
 }
+
+void Logger::add(const QString& className, void* object, const QString& msg) {
+    add(className, msg + " " + objectTag(object));
+}

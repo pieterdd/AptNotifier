@@ -23,6 +23,21 @@ public:
 
     /** [THREAD-SAFE] Writes a message to the log file. */
     void add(const QString& className, const QString &msg);
+
+    /** [THREAD-SAFE] Writes a message to the log file, appending
+      * an object tag to keep track of the instance during the log. */
+    void add(const QString& className, void* object, const QString& msg);
+
+    /** Generates a 0xBAADF00D-style string for a given object. */
+    static QString objectStr(void* object) {
+        return "0x" + QString::number(16, (int)object);
+    }
+
+    /** Generates full "(0xBAADF00D)" object tag. */
+    static QString objectTag(void* object) {
+        return "(" + objectStr(object) + ")";
+    }
+
 private:
     static Logger instancePtr;
 
