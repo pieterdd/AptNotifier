@@ -30,12 +30,16 @@ public:
 
     /** Generates a 0xBAADF00D-style string for a given object. */
     static QString objectStr(void* object) {
-        return "0x" + QString::number(16, (int)object);
+        QString result;
+        result.sprintf("%p", object);
+        return result;
     }
 
     /** Generates full "(0xBAADF00D)" object tag. */
     static QString objectTag(void* object) {
-        return "(" + objectStr(object) + ")";
+        QString result;
+        result.sprintf("(%p)", object);
+        return result;
     }
 
 private:

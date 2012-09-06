@@ -2,6 +2,7 @@
 
 #include "logger.h"
 #include <QUrl>
+#include <cassert>
 #include <QNetworkRequest>
 
 const char* HttpDownloader::CLASSNAME = "HttpDownloader";
@@ -12,15 +13,20 @@ HttpDownloader::HttpDownloader(QObject *parent) :
 }
 
 void HttpDownloader::doGet(const QString& url) {
-    Logger::instance()->add(CLASSNAME, this, "Filed GET request for " + url);
     QUrl requestedUrl(url);
-    QNetworkRequest request(requestedUrl);
+    doGet(requestedUrl);
+}
+
+void HttpDownloader::doGet(const QUrl &url) {
+    Logger::instance()->add(CLASSNAME, this, "Filed GET request for " + url.toString());
+    QNetworkRequest request(url);
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
     QNetworkReply *reply = manager->get(request);
     doConnects(reply, manager);
 }
 
 void HttpDownloader::doPost(const QString& url, QByteArray *message) {
+    assert(message);
     Logger::instance()->add(CLASSNAME, this, "Filed POST request for " + url);
     QNetworkRequest request(url);
     QNetworkAccessManager *manager = new QNetworkAccessManager(this);
@@ -29,6 +35,9 @@ void HttpDownloader::doPost(const QString& url, QByteArray *message) {
 }
 
 void HttpDownloader::doConnects(QNetworkReply *reply, QNetworkAccessManager* manager){
+    assert(reply);
+    assert(manager);
+
     // Reply connects
     QObject::connect(reply, SIGNAL(error(QNetworkReply::NetworkError)),
                      this, SLOT(reqError(QNetworkReply::NetworkError)));
@@ -45,13 +54,24 @@ void HttpDownloader::doConnects(QNetworkReply *reply, QNetworkAccessManager* man
 }
 
 
-void HttpDownloader::requestReturned(QNetworkReply* rep){
+void HttpDownloader::requestReturned(QNetworkReply* rep) {
+    assert(rep);
     QVariant status = rep->attribute(QNetworkRequest::HttpStatusCodeAttribute);
 
-    if(status != 200 || status == NULL) {
+    if (status != 200 || status == NULL) {
         Logger::instance()->add(CLASSNAME, this, "Received non-200 response");
-        QString *lastError = new QString("ERROR: " + status.toString()
-                                         + " " + rep->readAll());
+        QString *lastError = new QString("ERROR: " + status.toString() + " " + rep->readAll());
+
+#ifdef DEBUG
+        // TODO DEBUG: dump error page
+        QFile file("test");
+        if (!file.open(QIODevice::WriteOnly))
+            return;
+        QTextStream out(&file);
+        out << *lastError;
+        file.close();
+#endif
+
         emit receivedData(false, lastError);
         delete lastError;
     } else {
@@ -77,7 +97,7 @@ void HttpDownloader::sslErrorFail(QNetworkReply*, const QList<QSslError>&) {
 }
 
 void HttpDownloader::reqError(QNetworkReply::NetworkError code) {
-    Logger::instance()->add(CLASSNAME, this, "Request error code 0x" + QString::number(16, code));
+    Logger::instance()->add(CLASSNAME, this, "Request QNetworkReply::NetworkError code " + QString::number(code));
 }
 
 void HttpDownloader::sslError(const QList<QSslError>&) {

@@ -112,7 +112,7 @@ void CalendarDB::writeCalendars()
     // Write the URLs
     _calLock.lock();
     foreach (Calendar* cal, _calendars)
-        out << cal->url() << "\n";
+        out << cal->url().toString() << "\n";
     _calLock.unlock();
 
     // Done.

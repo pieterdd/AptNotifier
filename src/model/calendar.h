@@ -2,6 +2,7 @@
 #define CALENDAR_H
 
 #include "logger.h"
+#include "httpdownloader.h"
 #include <QUrl>
 #include <QColor>
 #include <QTimer>
@@ -45,7 +46,7 @@ public:
     enum StatusCode { NotLoaded, Online, Offline };
 
     /* Getters */
-    QString url() const { return (QString)_url.toEncoded(); }
+    QUrl url() const { return _url; }
     QString name() {     // This getter requires thread sync
         engageBufferLock("getting name attribute");
         QString retVal = _name;
@@ -85,8 +86,12 @@ public:
     }
 private slots:
     /** [THREAD-SAFE] Analyses the downloaded calendar file and rebuilds the cache if the
+      * checksum of the file has changed. The function DOESN'T get ownership over 'data'. */
+    void parseNetworkResponse_NEW(bool success, QString* data);
+
+    /** [THREAD-SAFE] Analyses the downloaded calendar file and rebuilds the cache if the
       * checksum of the file has changed. */
-    void parseNetworkResponse();
+    void parseNetworkResponse(); // TODO: DEPRECATED
 
     /** [THREAD-SAFE] Called instead of parseNetworkResponse when something goes wrong. */
     void parseNetworkResponse_Fail();
@@ -157,7 +162,8 @@ private:
     QImage _image;
     QTimer _nfyTimer;
     QNetworkAccessManager _naMgr;
-    QNetworkReply* _naReply;
+    QNetworkReply* _naReply;  // TODO: DEPRECATED
+    HttpDownloader _httpDl;
 
     /** Holds a hash that helps detect changes in new calendars. _bufferLock required for access. */
     int _calChecksum;

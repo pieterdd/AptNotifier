@@ -136,7 +136,7 @@ void CalendarDBView::registerCalendar(Calendar* cal)
 
     // Create new widget item. The list widget takes ownership, so no need to delete.
     _calsLock.lock();
-    Logger::instance()->add(CLASSNAME, "Registering calendar with URL " + cal->url() + "...");
+    Logger::instance()->add(CLASSNAME, "Registering calendar with URL " + cal->url().toString() + "...");
     QImage calImg = cal->image().scaledToHeight(_calList.height());
     Calendar::drawBorder(calImg, 1, QColor(0, 0, 0));
     QListWidgetItem* newItem = new QListWidgetItem(QIcon(QPixmap::fromImage(calImg)), cal->name());
@@ -151,8 +151,8 @@ void CalendarDBView::registerCalendar(Calendar* cal)
 
 void CalendarDBView::processCalendarNameChange(Calendar* cal)
 {
-    // TODO VERIFY -- Thread safety: this slot will not be executing for two
-    // objects simultaneously.
+    // Thread safety: this slot will not be executing for two
+    // objects simultaneously. See connect() docs for details.
 
     // Only an update of the list widget is needed
     updateCalendarLabel(cal);
@@ -160,8 +160,8 @@ void CalendarDBView::processCalendarNameChange(Calendar* cal)
 
 void CalendarDBView::processCalendarStatusChange(Calendar *cal)
 {
-    // TODO VERIFY -- Thread safety: this slot will not be executing for two
-    // objects simultaneously.
+    // Thread safety: this slot will not be executing for two
+    // objects simultaneously. See connect() docs for details.
 
     // Update the list widget
     updateCalendarLabel(cal);
@@ -196,25 +196,16 @@ void CalendarDBView::unregisterCalendar(Calendar* cal)
     refreshCalUpdateStatus();
 }
 
-void CalendarDBView::processNewOngoingAptEvents(Calendar *cal, const QLinkedList<Appointment> &list)
-{
+void CalendarDBView::processNewOngoingAptEvents(Calendar *cal, const QLinkedList<Appointment> &list) {
     createAptListToaster(cal, "Now in progress", list);
 }
 
-void CalendarDBView::processReminders(Calendar *cal, const QLinkedList<Appointment>& list)
-{
+void CalendarDBView::processReminders(Calendar *cal, const QLinkedList<Appointment>& list) {
     createAptListToaster(cal, "Event reminder", list);
 }
 
-void CalendarDBView::showInvalidCalendarFormatError(Calendar* cal)
-{
-    QMessageBox msg;
-    QString text = "One of your calendars could not be recognized. Please make sure that you have an active internet connection and verify the address of the calendar.\n\n";
-    text += "You will NOT receive alerts from this calendar.\n";
-    text += "URL: " + cal->url();
-    msg.setText(text);
-    msg.setIcon(QMessageBox::Warning);
-    msg.exec();
+void CalendarDBView::showInvalidCalendarFormatError(Calendar* cal) {
+    _trayIcon.showMessage("AptNotifier", "A calendar hosted at " + cal->url().host() + " could not be recognized. You might want to check your connection and verify the address of the calendar.", QSystemTrayIcon::Warning, 5000);
 }
 
 void CalendarDBView::showNewCalendarDialog()
@@ -228,8 +219,7 @@ void CalendarDBView::showNewCalendarDialog()
     }
 }
 
-void CalendarDBView::updateBtnRemoveState()
-{
+void CalendarDBView::updateBtnRemoveState() {
     // 'Remove' button can be used if exactly one
     // calendar is selected.
     if (_calList.selectedItems().count() == 1)
@@ -238,8 +228,7 @@ void CalendarDBView::updateBtnRemoveState()
         _btnRemove.setEnabled(false);
 }
 
-void CalendarDBView::removeSelectedCalendars()
-{
+void CalendarDBView::removeSelectedCalendars() {
     QList<QListWidgetItem*> select = _calList.selectedItems();
 
     // Issue a delete request for all selected items
@@ -252,8 +241,7 @@ void CalendarDBView::removeSelectedCalendars()
     }
 }
 
-void CalendarDBView::updateCalendars()
-{
+void CalendarDBView::updateCalendars() {
     _trayIcon.showMessage(QCoreApplication::applicationName(), "Hang on while we refresh your calendars...");
     assert(_calDB);
     _calDB->updateCalendars();
