@@ -64,16 +64,6 @@ void HttpDownloader::requestReturned(QNetworkReply* rep) {
         QString *lastError = new QString("HTTP ERROR " + rep->attribute(QNetworkRequest::HttpStatusCodeAttribute).toString()
                                          + " (" + rep->errorString() + ")\r\n---\r\n\r\n " + rep->readAll());
 
-#ifdef DEBUG
-        // TODO DEBUG: dump error page
-        QFile file("test");
-        if (!file.open(QIODevice::WriteOnly))
-            return;
-        QTextStream out(&file);
-        out << *lastError;
-        file.close();
-#endif
-
         emit receivedData(false, lastError);
         delete lastError;
     } else {
