@@ -27,11 +27,15 @@ void Logger::initialize() {
 }
 
 void Logger::add(const QString& className, const QString& msg) {
+    Q_UNUSED(className)
+    Q_UNUSED(msg)
+#ifdef DEBUG
     _fileLocker.lock();
     assert(_file.isOpen() && _file.isWritable());
     _fileStream << className + ": " + msg + "\n";
     _fileStream.flush();
     _fileLocker.unlock();
+#endif
 }
 
 void Logger::add(const QString& className, void* object, const QString& msg) {

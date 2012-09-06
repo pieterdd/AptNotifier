@@ -87,11 +87,7 @@ public:
 private slots:
     /** [THREAD-SAFE] Analyses the downloaded calendar file and rebuilds the cache if the
       * checksum of the file has changed. The function DOESN'T get ownership over 'data'. */
-    void parseNetworkResponse_NEW(bool success, QString* data);
-
-    /** [THREAD-SAFE] Analyses the downloaded calendar file and rebuilds the cache if the
-      * checksum of the file has changed. */
-    void parseNetworkResponse(); // TODO: DEPRECATED
+    void parseNetworkResponse(bool success, QString* data);
 
     /** [THREAD-SAFE] Called instead of parseNetworkResponse when something goes wrong. */
     void parseNetworkResponse_Fail();
@@ -161,8 +157,6 @@ private:
     QColor _color;
     QImage _image;
     QTimer _nfyTimer;
-    QNetworkAccessManager _naMgr;
-    QNetworkReply* _naReply;  // TODO: DEPRECATED
     HttpDownloader _httpDl;
 
     /** Holds a hash that helps detect changes in new calendars. _bufferLock required for access. */

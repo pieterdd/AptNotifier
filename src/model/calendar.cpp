@@ -15,40 +15,27 @@ short Calendar::timeShift = Calendar::calcTimeShift();
 const short Calendar::IMAGEDIM = 64;
 const char* Calendar::CLASSNAME = "Calendar";
 
-Calendar::Calendar(const QString &url, const QColor &color)
-    : _naMgr(this)
-{
-    _url = QUrl(url);
+Calendar::Calendar(const QString &url, const QColor &color) {
+    QByteArray urlArray;
+    _url = QUrl::fromEncoded(urlArray.append(url));
     _name = "Untitled Calendar";
     _calChecksum = 0;
     _color = color;
     _status = NotLoaded;
     _aptCache = new AptCache();
-    _naReply = NULL;
     buildCalendarImage();
 
     // Wire QObjects
-    connect(&_httpDl, SIGNAL(receivedData(bool,QString*)), this, SLOT(parseNetworkResponse_NEW(bool,QString*)));
+    connect(&_httpDl, SIGNAL(receivedData(bool,QString*)), this, SLOT(parseNetworkResponse(bool,QString*)));
     connect(&_nfyTimer, SIGNAL(timeout()), this, SLOT(sendNotifications()));
 }
 
 Calendar::~Calendar() {
-    _naReply->deleteLater();
     delete _aptCache;
 }
 
 void Calendar::update()
 {
-    _bufferLock.lock();
-    QNetworkReply* reply = _naReply;
-    _bufferLock.unlock();
-
-    // Don't update if an active request exists
-    if (reply) {
-        Logger::instance()->add(CLASSNAME, "Skipping update for 0x" + QString::number((unsigned)this, 16) + " since an update is already in progress.");
-        return;
-    }
-
     // Start calendar download asynchronously. After retrieving the
     // file, parseNetworkResponse will take over.
     Logger::instance()->add(CLASSNAME, "Fetching update for 0x" + QString::number((unsigned)this, 16) + "...");
@@ -178,7 +165,7 @@ void Calendar::fillRectangle(QImage &img, unsigned x, unsigned y, unsigned w, un
     }
 }
 
-void Calendar::parseNetworkResponse_NEW(bool success, QString *data) {
+void Calendar::parseNetworkResponse(bool success, QString *data) {
     // Retrieve the current calendar status in a thread-safe way
     Logger::instance()->add(CLASSNAME, "Fetching current status for 0x" + QString::number((unsigned)this, 16) + "...");
     StatusCode oldStatus = status();
@@ -232,81 +219,6 @@ void Calendar::parseNetworkResponse_NEW(bool success, QString *data) {
     }
 
     Logger::instance()->add(CLASSNAME, "Finished updating 0x" + QString::number((unsigned)this, 16) + ".");
-}
-
-void Calendar::parseNetworkResponse() {
-    _bufferLock.lock();
-    assert(_naReply);
-    QNetworkReply* reply = _naReply;
-    _bufferLock.unlock();
-
-    // TODO: we suspect that sometimes a SIGSEGV occurs within the bounds
-    // of this function. We'll remove the excessive log calls when we've
-    // successfully tracked down the problem.
-
-    // Retrieve the current calendar status in a thread-safe way
-    Logger::instance()->add(CLASSNAME, "Fetching current status for 0x" + QString::number((unsigned)this, 16) + "...");
-    StatusCode oldStatus = status();
-    Logger::instance()->add(CLASSNAME, "Fetched current status for 0x" + QString::number((unsigned)this, 16) + ".");
-    QNetworkReply::NetworkError error = reply->error();
-
-    // Only proceed with the update if nothing went wrong.
-    // Otherwise the update will be halted.
-    if (error == QNetworkReply::NoError) {
-        // Extract the server response and file checksum
-        QString rawData = reply->readAll();
-        rawData.replace("\r", "");
-
-        // Calculate the calendar checksum based on Last Modified attributes
-        QString checksumData = rawData;
-        checksumData.replace(QRegExp("((^|\\n)(?!LAST-MODIFIED)[^\\n]*)+"), "");
-        int newChecksum = qChecksum(checksumData.toUtf8(), checksumData.length());
-        setStatus(Online);
-
-        Logger::instance()->add(CLASSNAME, "Comparing update checksum for 0x" + QString::number((unsigned)this, 16) + "...");
-
-        // If we can't checksum because Last Modified attributes are unavailable,
-        // fall back on regular file checksumming.
-        if (newChecksum == 0)
-            newChecksum = qChecksum(rawData.toUtf8(), rawData.length());
-
-        // Compare checksums to see if a reload is necessary
-        if (calChecksum() != newChecksum && rawData != "") {
-            Logger::instance()->add(CLASSNAME, "Change was detected for 0x" + QString::number((int)this, 16) + ".");
-
-            // Construct our new appointment cache off the raw data. Then replace the old cache.
-            AptCache* aptCache = parseICSFile(rawData);
-            if (!aptCache)
-                return;
-
-            engageBufferLock("replacing old appointment cache");
-            delete _aptCache;
-            _aptCache = aptCache;
-            releaseBufferLock("installed new appointment cache");
-
-            // Notify the view on file changes, unless it's our initial load
-            if (calChecksum() != 0)
-                emit calendarChanged(this);
-            setCalChecksum(newChecksum);
-
-            // Send out our first batch of notifications (thread-safe)
-            sendNotifications();
-        }
-    } else {
-        // In the event of a download error, set the calendar to Offline.
-        Logger::instance()->add(CLASSNAME, "Error fetching update for 0x" + QString::number((unsigned)this, 16) + ".");
-        setStatus(Offline);
-        if (oldStatus == NotLoaded)
-            emit formatNotRecognized(this);
-    }
-
-    Logger::instance()->add(CLASSNAME, "Finished updating 0x" + QString::number((unsigned)this, 16) + ".");
-
-    // Dispose update object
-    _bufferLock.lock();
-    _naReply->deleteLater();
-    _naReply = NULL;
-    _bufferLock.unlock();
 }
 
 void Calendar::parseNetworkResponse_Fail() {

@@ -13,8 +13,9 @@ HttpDownloader::HttpDownloader(QObject *parent) :
 }
 
 void HttpDownloader::doGet(const QString& url) {
-    QUrl requestedUrl(url);
-    doGet(requestedUrl);
+    QByteArray urlArray;
+    QUrl urlObj = QUrl::fromEncoded(urlArray.append(url));
+    doGet(urlObj);
 }
 
 void HttpDownloader::doGet(const QUrl &url) {
@@ -60,7 +61,8 @@ void HttpDownloader::requestReturned(QNetworkReply* rep) {
 
     if (status != 200 || status == NULL) {
         Logger::instance()->add(CLASSNAME, this, "Received non-200 response");
-        QString *lastError = new QString("ERROR: " + status.toString() + " " + rep->readAll());
+        QString *lastError = new QString("HTTP ERROR " + rep->attribute(QNetworkRequest::HttpStatusCodeAttribute).toString()
+                                         + " (" + rep->errorString() + ")\r\n---\r\n\r\n " + rep->readAll());
 
 #ifdef DEBUG
         // TODO DEBUG: dump error page
