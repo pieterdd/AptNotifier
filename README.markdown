@@ -5,8 +5,6 @@ AptNotifier (pronounced *Appointment Notifier*) is an application that helps you
 
 For an up-to-date list of the current limitations of AptNotifier, check our [issue tracker](https://github.com/pieterdd/AptNotifier/issues).
 
-Currently we're dealing with a bug that sometimes causes release versions of AptNotifier to crash at startup. We have introduced logging to help us track down the context of this issue. So far we haven't been able to replicate this problem in debug versions, so we're left in the dark for now.
-
 
 License
 =======
