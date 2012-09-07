@@ -123,24 +123,6 @@ private:
     /** Fills a rectangle area in an image with a color. */
     static void fillRectangle(QImage& img, unsigned x, unsigned y, unsigned w, unsigned h, const QColor& color);
 
-    /** Given a raw ICS file, this function parses its contents and loads all relevant content into a new
-      * AptCache object. Ownership of this object is transferred over to the caller. May return NULL if
-      * import failed. */
-    AptCache* parseICSFile(QString rawData);                                 // TODO: DEPRECATED
-
-    /** [HELPER] Loops over each VEVENT in rawData, adding new appointments to aptCache as they pop up. */
-    void parseICSFile_FillAptCache(QString& rawData, AptCache* aptCache);    // TODO: DEPRECATED
-
-    /** [HELPER] Checks if at least one more VEVENT can be extracted from rawData. */
-    bool parseICSFile_EventsLeft(const QString& rawData) const;              // TODO: DEPRECATED
-
-    /** [HELPER] Extracts the raw text of the next VEVENT from rawData. */
-    QString parseICSFile_GetRawApt(const QString& rawData) const;            // TODO: DEPRECATED
-
-    /** Determines the reminder timestamp of an appointment based on the appointment
-      * time and the "TRIGGER" field. */
-    QDateTime determineReminderStamp(const QDateTime& aptStart, const QString& triggerInfo);    // TODO: DEPRECATED
-
     /** Calculates the user's time zone shift compared to UTC.
       * \todo This will likely cause a bug when used in Newfoundland or other places
       * that have non-integer timezone shifts. */
