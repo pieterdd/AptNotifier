@@ -1,6 +1,8 @@
 #include "appointment.h"
 
 #include "calendar.h"
+#include <cmath>
+#include <cassert>
 #include <QString>
 
 Appointment::Appointment(const QString& input)
@@ -18,19 +20,82 @@ Appointment::Appointment(const Appointment& other) {
     _summary = other._summary;
 }
 
-QString Appointment::composeShortDateTime(const QDateTime &dateTime)
-{
+bool Appointment::isDayWide() const {
+    assert(isValid());
+
+    // Rule 1: the appointment must start exactly at midnight
+    if (_start.time().hour() != 0 || _start.time().minute() != 0 || _start.time().second() != 0)
+        return false;
+
+    // Rule 2: the appointment must end exactly at midnight
+    if (_end.time().hour() != 0 || _end.time().minute() != 0 || _end.time().second() != 0)
+        return false;
+
+    return true;
+}
+
+QString Appointment::timeString() const {
+    // Day-wide appointment strings are formatted
+    // differently than their regular counterparts.
+    if (isDayWide())
+        return timeString_DayWide();
+    else
+        return timeString_Regular();
+}
+
+QString Appointment::timeString_DayWide() const {
     QDateTime now = QDateTime::currentDateTime();
 
-    // Rule 1: the timestamp falls within this day, show the time code
-    if (now.date() == dateTime.date())
-        return QString::number(dateTime.time().hour()) + ":" + QString().sprintf("%02d", dateTime.time().minute());
-    // Rule 2: the timestamp falls within this year, show the month and day
-    else if (now.date().year() == dateTime.date().year())
-        return QDate::shortMonthName(dateTime.date().month()) + " " + dateTime.date().day();
-    // Rule 3: the timestamp doesn't fall within this year, show short date format
+    // Rule 1: for a day-wide appointment with a 1-day duration...
+    if (_start.daysTo(_end) == 1) {
+        // ... if it starts today
+        if (now.date() == _start.date())
+            return "Today";
+        // ... if it starts tomorrow
+        else if (now.date().addDays(1) == _start.date())
+            return "Tomorrow";
+        // ... if it starts later
+        else
+            return _start.toString(Qt::SystemLocaleLongDate);
+    }
+    // Rule 2: for a day-wide appointment lasting longer than 1 day...
+    else {
+        // ... with a passed start date
+        if (now.date() > _start.date())
+            return "Started " + _start.date().toString(Qt::SystemLocaleShortDate) + " (" + QString::number(now.daysTo(_end)) + " days left)";
+        // ... if it starts today
+        else if (now.date() == _start.date())
+            return "Started today (" + QString::number(now.daysTo(_end)) + " days left)";
+        // ... if it starts tomorrow
+        else if (now.date().addDays(1) == _start.date())
+            return "Starts tomorrow (lasts " + QString::number(_start.daysTo(_end)) + " days)";
+        // ... with a start date in the future
+        else
+            return "Starts " + _start.date().toString(Qt::SystemLocaleShortDate) + " (in " + QString::number(now.daysTo(_start)) + " days)";
+    }
+}
+
+QString Appointment::timeString_Regular() const {
+    QDateTime now = QDateTime::currentDateTime();
+
+    // Rule 1: the appointment starts today...
+    if (now.date() == _start.date()) {
+        // ... and started this very minute
+        if (_start.time() == now.time().addSecs(-now.time().second()))
+            return "Just started";
+        // ... and its start time has passed
+        else if (_start < now)
+            return QString::number(ceil(now.secsTo(_end)/60.0)) + " minutes left";
+        // ... and starts within the next hour
+        else if (_start < now.addSecs(60*60))
+            return "In " + QString::number(ceil(now.secsTo(_start)/60.0)) + " minutes";
+        // ... and starts a later time today
+        else
+            return "In " + QString::number(ceil(now.secsTo(_start)/60.0/60.0)) + " hours";
+    }
+    // Rule 2: other cases
     else
-        return dateTime.date().toString(Qt::SystemLocaleShortDate);
+        return "Starts " + _start.date().toString(Qt::SystemLocaleShortDate) + " " + _start.time().toString("hh:mm");
 }
 
 void Appointment::parseStart(const QString &rawData)

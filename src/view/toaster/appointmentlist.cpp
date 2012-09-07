@@ -69,8 +69,8 @@ void AppointmentList::setupGUI(Calendar* cal) {
 void AppointmentList::loadAppointment(QLinkedList<Appointment>::iterator it) {
     _nfyTimer.stop();
     const Appointment& apt = *it;
-    QString start = Appointment::composeShortDateTime(apt.start());
-    _lblAppointment.setText(start + " <b>" + apt.summary() + "</b>");
+    QString timeStr = apt.timeString();
+    _lblAppointment.setText("<b style='font-size: 16px; font-family: Arial'>" + apt.summary() + "</b><br />" + timeStr);
 
     // If this item was the first in line, disable the back button
     _btnBack.setVisible(it != _aptList.begin());

@@ -21,9 +21,18 @@ public:
     const QDateTime& end() const { return _end; }
     const QString& summary() const { return _summary; }
 
-    /** Converts a timestamp into 'hh:mm', 'Jan 1', 'tomorrow', etc. */
-    static QString composeShortDateTime(const QDateTime& dateTime);
+    /** Returns true if the appointment starts at midnight and its
+      * duration is a multiple of 1 day. */
+    bool isDayWide() const;
+
+    /** Generates a string representation of the start/end time, relative
+      * to the current time. */
+    QString timeString() const;
 private:
+    // Time string generation helpers
+    QString timeString_DayWide() const;
+    QString timeString_Regular() const;
+
     // Parsing helpers
     void parseStart(const QString& rawData);
     void parseEnd(const QString& rawData);
