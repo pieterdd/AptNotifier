@@ -8,7 +8,7 @@
 
 /**
   * Thread-safe class that logs various bits of information to a file.
-  * @author Pieter De Decker
+  * \author Pieter De Decker
   */
 class Logger
 {

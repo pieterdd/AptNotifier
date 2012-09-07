@@ -22,7 +22,8 @@ SOURCES += main.cpp\
     view/toaster/toastmanager.cpp \
     model/logger.cpp \
     model/aptcache.cpp \
-    model/httpdownloader.cpp
+    model/httpdownloader.cpp \
+    model/icsparser.cpp
 
 HEADERS  += \
     model/appointment.h \
@@ -36,7 +37,8 @@ HEADERS  += \
     view/toaster/toastmanager.h \
     model/logger.h \
     model/aptcache.h \
-    model/httpdownloader.h
+    model/httpdownloader.h \
+    model/icsparser.h
 
 RESOURCES += \
     resources.qrc

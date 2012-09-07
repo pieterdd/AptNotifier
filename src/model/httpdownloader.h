@@ -8,7 +8,7 @@
 /**
   * Assists in fetching HTTP resources. All functions in this class are thread-safe.
   *
-  * @author Adapted from code published by FaddishWorm
+  * \author Adapted from code published by FaddishWorm
   *   at http://stackoverflow.com/questions/12002947/possible-stack-corruption-during-use-of-qnetworkaccessmanager
   */
 class HttpDownloader : public QObject

@@ -1,6 +1,7 @@
 #include "calendar.h"
 
 #include "aptcache.h"
+#include "icsparser.h"
 #include "appointment.h"
 #include <cmath>
 #include <QFile>
@@ -28,6 +29,8 @@ Calendar::Calendar(const QString &url, const QColor &color) {
     // Wire QObjects
     connect(&_httpDl, SIGNAL(receivedData(bool,QString*)), this, SLOT(parseNetworkResponse(bool,QString*)));
     connect(&_nfyTimer, SIGNAL(timeout()), this, SLOT(sendNotifications()));
+    _nfyTimer.setInterval(30000);
+    _nfyTimer.setSingleShot(true);
 }
 
 Calendar::~Calendar() {
@@ -38,9 +41,8 @@ void Calendar::update()
 {
     // Start calendar download asynchronously. After retrieving the
     // file, parseNetworkResponse will take over.
-    Logger::instance()->add(CLASSNAME, "Fetching update for 0x" + QString::number((unsigned)this, 16) + "...");
     _httpDl.doGet(_url);
-    Logger::instance()->add(CLASSNAME, "Update request for 0x" + QString::number((unsigned)this, 16) + " was filed.");
+    Logger::instance()->add(CLASSNAME, this, "Update request was filed");
 }
 
 void Calendar::drawBorder(QImage &img, int thickness, const QColor &color) {
@@ -59,7 +61,9 @@ void Calendar::sendNotifications()
     sendNotifications_Reminders();
 
     // Check notifications again in half a minute
-    QTimer::singleShot(30000, this, SLOT(sendNotifications()));
+    engageBufferLock("accessing timer");
+    _nfyTimer.start();
+    releaseBufferLock("finished accessing timer");
 }
 
 void Calendar::sendNotifications_Ongoing()
@@ -166,73 +170,65 @@ void Calendar::fillRectangle(QImage &img, unsigned x, unsigned y, unsigned w, un
 }
 
 void Calendar::parseNetworkResponse(bool success, QString *data) {
-    // Retrieve the current calendar status in a thread-safe way
-    Logger::instance()->add(CLASSNAME, "Fetching current status for 0x" + QString::number((unsigned)this, 16) + "...");
-    StatusCode oldStatus = status();
-    Logger::instance()->add(CLASSNAME, "Fetched current status for 0x" + QString::number((unsigned)this, 16) + ".");
+    assert(data);
+    engageBufferLock("accessing status and timer");
+    StatusCode oldStatus = _status;
+    _nfyTimer.stop();
+    releaseBufferLock("releasing status and timer");
 
     if (!success) {
         // In the event of a download error, set the calendar to Offline.
-        Logger::instance()->add(CLASSNAME, "Error fetching update for 0x" + QString::number((unsigned)this, 16) + ".");
+        Logger::instance()->add(CLASSNAME, this, "Error fetching update");
+
         setStatus(Offline);
         if (oldStatus == NotLoaded)
             emit formatNotRecognized(this);
     } else {
-        QString rawData = *data;
-        rawData.replace("\r", "");
+        Logger::instance()->add(CLASSNAME, this, "Parsing ICS data...");
+        ICSParser parser(*data);
 
-        // Calculate the calendar checksum based on Last Modified attributes
-        QString checksumData = rawData;
-        checksumData.replace(QRegExp("((^|\\n)(?!LAST-MODIFIED)[^\\n]*)+"), "");
-        int newChecksum = qChecksum(checksumData.toUtf8(), checksumData.length());
-        setStatus(Online);
+        // Check ICS validity first
+        if (!parser.holdsValidICS()) {
+            Logger::instance()->add(CLASSNAME, this, "Downloaded data appears to be invalid ICS");
+            setStatus(Offline);
+        } else {
+            // Only repopulate the AptCache if the calendar changed
+            if (calChecksum() != parser.checksum()) {
+                AptCache* aptCache = parser.readAppointments();
+                assert(aptCache);
 
-        Logger::instance()->add(CLASSNAME, "Comparing update checksum for 0x" + QString::number((unsigned)this, 16) + "...");
+                // Replace old cache, update checksum and update name
+                engageBufferLock("replacing old appointment cache");
+                delete _aptCache;
+                _aptCache = aptCache;
+                _calChecksum = parser.checksum();
+                releaseBufferLock("installed new appointment cache");
 
-        // If we can't checksum because Last Modified attributes are unavailable,
-        // fall back on regular file checksumming.
-        if (newChecksum == 0)
-            newChecksum = qChecksum(rawData.toUtf8(), rawData.length());
+                // Update other attributes that will trigger update signals
+                if (name() != parser.name())
+                    setName(parser.name());
+                setStatus(Online);
 
-        // Compare checksums to see if a reload is necessary
-        if (calChecksum() != newChecksum && rawData != "") {
-            Logger::instance()->add(CLASSNAME, "Change was detected for 0x" + QString::number((int)this, 16) + ".");
-
-            // Construct our new appointment cache off the raw data. Then replace the old cache.
-            AptCache* aptCache = parseICSFile(rawData);
-            if (!aptCache)
-                return;
-
-            engageBufferLock("replacing old appointment cache");
-            delete _aptCache;
-            _aptCache = aptCache;
-            releaseBufferLock("installed new appointment cache");
-
-            // Notify the view on file changes, unless it's our initial load
-            if (calChecksum() != 0)
-                emit calendarChanged(this);
-            setCalChecksum(newChecksum);
-
-            // Send out our first batch of notifications (thread-safe)
-            sendNotifications();
+                // Send out our first batch of notifications
+                sendNotifications();
+            }
         }
     }
 
-    Logger::instance()->add(CLASSNAME, "Finished updating 0x" + QString::number((unsigned)this, 16) + ".");
+    Logger::instance()->add(CLASSNAME, this, "Finished updating");
 }
 
 void Calendar::parseNetworkResponse_Fail() {
-    Logger::instance()->add(CLASSNAME, "Something went wrong while fetching an update for 0x" + QString::number((unsigned)this, 16) + ".");
+    Logger::instance()->add(CLASSNAME, this, "Something went wrong while fetching an update");
     emit formatNotRecognized(this);
 }
 
 AptCache* Calendar::parseICSFile(QString rawData) {
-    Logger::instance()->add(CLASSNAME, "Importing calendar changes for 0x" + QString::number((int)this, 16) + ".");
+    Logger::instance()->add(CLASSNAME, this, "Importing calendar changes");
 
     // If we don't have the ICS header, this is not a valid calendar
     if (rawData.indexOf("BEGIN:VCALENDAR") != 0) {
-        Logger::instance()->add(CLASSNAME, "Import of 0x" + QString::number((int)this, 16) + " failed because it" +
-                                " isn't recognized as an ICS file.");
+        Logger::instance()->add(CLASSNAME, this, "Import failed because file isn't recognized as ICS-formatted");
         setName("Invalid Calendar");
         setStatus(Offline);
         emit formatNotRecognized(this);
@@ -352,19 +348,21 @@ short Calendar::calcTimeShift() {
 
 void Calendar::engageBufferLock(const QString& reason = "no reason given")
 {
+    Q_UNUSED(reason)
 #ifdef VERBOSELOCKING
-    Logger::instance()->add(CLASSNAME, "Requesting buffer lock for object 0x" + QString::number((unsigned)this, 16) + " (" + reason + ")");
+    Logger::instance()->add(CLASSNAME, this, "Requesting buffer lock with reason '" + reason + "'");
 #endif
     _bufferLock.lock();
 #ifdef VERBOSELOCKING
-    Logger::instance()->add(CLASSNAME, "Activated buffer lock for object 0x" + QString::number((unsigned)this, 16) + " (" + reason + ")");
+    Logger::instance()->add(CLASSNAME, this, "Activated buffer lock with reason '" + reason + "'");
 #endif
 }
 
-void Calendar::releaseBufferLock(const QString &reason)
+void Calendar::releaseBufferLock(const QString& reason = "no reason given")
 {
+    Q_UNUSED(reason)
     _bufferLock.unlock();
 #ifdef VERBOSELOCKING
-    Logger::instance()->add(CLASSNAME, "Released buffer lock for object 0x" + QString::number((unsigned)this, 16) + " (" + reason + ")");
+    Logger::instance()->add(CLASSNAME, this, "Released buffer lock with reason '" + reason + "'");
 #endif
 }
