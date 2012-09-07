@@ -35,26 +35,42 @@ QString Appointment::composeShortDateTime(const QDateTime &dateTime)
 
 void Appointment::parseStart(const QString &rawData)
 {
-    // Check if a start date has been given
+    // Option 1: the start time is a date/time stamp
     int dtstartPos = rawData.indexOf("DTSTART:");
-    QString trimmedData = rawData.mid(dtstartPos + 8);
-    if (dtstartPos == -1)
-        return;
+    if (dtstartPos != -1) {
+        QString trimmedData = rawData.mid(dtstartPos + 8);
+        trimmedData = trimmedData.left(trimmedData.indexOf("\n"));
+        _start = parseDateTime(trimmedData);
+    }
 
-    // Parse the date
-    _start = parseDateTime(trimmedData);
+    // Option 2: the start time is a date stamp
+    dtstartPos = rawData.indexOf("DTSTART;VALUE=DATE:");
+    if (dtstartPos != -1) {
+        QString trimmedData = rawData.mid(dtstartPos + 19);
+        trimmedData = trimmedData.left(trimmedData.indexOf("\n"));
+        QDate date(trimmedData.mid(0, 4).toInt(), trimmedData.mid(4, 2).toInt(), trimmedData.mid(6, 2).toInt());
+        _start = QDateTime(date);
+    }
 }
 
 void Appointment::parseEnd(const QString &rawData)
 {
-    // Check if an end date has been given
+    // Option 1: the end time is a date/time stamp
     int dtendPos = rawData.indexOf("DTEND:");
-    QString trimmedData = rawData.mid(dtendPos + 6);
-    if (dtendPos == -1)
-        return;
+    if (dtendPos != -1) {
+        QString trimmedData = rawData.mid(dtendPos + 6);
+        _end = parseDateTime(trimmedData);
+    }
 
-    // Parse the date
-    _end = parseDateTime(trimmedData);
+    // Option 2: the end time is a date stamp
+    dtendPos = rawData.indexOf("DTEND;VALUE=DATE:");
+    if (dtendPos != -1) {
+        QString trimmedData = rawData.mid(dtendPos + 17);
+        trimmedData = trimmedData.left(trimmedData.indexOf("\n"));
+        QDate date(trimmedData.mid(0, 4).toInt(), trimmedData.mid(4, 2).toInt(), trimmedData.mid(6, 2).toInt());
+        _end = QDateTime(date);
+    }
+
 }
 
 void Appointment::parseSummary(const QString &rawData) {
