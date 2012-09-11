@@ -55,6 +55,9 @@ void Calendar::drawBorder(QImage &img, int thickness, const QColor &color) {
 
 void Calendar::sendNotifications()
 {
+    Logger::instance()->add(CLASSNAME, this, "Checking notifications at "
+                            + QDateTime::currentDateTime().toString("hh:mm:ss") + "...");
+
     // First get the ongoing appointment notifications out the door,
     // then process the reminders.
     sendNotifications_Ongoing();
@@ -101,6 +104,23 @@ void Calendar::sendNotifications_Reminders()
     // Broadcast new reminders to observers
     if (reminders.count() > 0)
         emit newReminders(this, reminders);
+}
+
+void Calendar::repopulateCache(const ICSParser& parser) {
+    AptCache* aptCache = parser.readAppointments();
+    assert(aptCache);
+
+    // Replace old cache, update checksum and update name
+    engageBufferLock("replacing old appointment cache");
+    delete _aptCache;
+    _aptCache = aptCache;
+    _calChecksum = parser.checksum();
+    releaseBufferLock("installed new appointment cache");
+
+    // Update other attributes that will trigger update signals
+    if (name() != parser.name())
+        setName(parser.name());
+    setStatus(Online);
 }
 
 int Calendar::calChecksum() {
@@ -181,7 +201,7 @@ void Calendar::parseNetworkResponse(bool success, QString *data) {
         Logger::instance()->add(CLASSNAME, this, "Error fetching update");
 
         setStatus(Offline);
-        if (oldStatus == NotLoaded)
+        if (oldStatus != Offline)
             emit formatNotRecognized(this);
     } else {
         Logger::instance()->add(CLASSNAME, this, "Parsing ICS data...");
@@ -194,22 +214,12 @@ void Calendar::parseNetworkResponse(bool success, QString *data) {
         } else {
             // Only repopulate the AptCache if the calendar changed
             if (calChecksum() != parser.checksum()) {
-                AptCache* aptCache = parser.readAppointments();
-                assert(aptCache);
+                repopulateCache(parser);
+            }
 
-                // Replace old cache, update checksum and update name
-                engageBufferLock("replacing old appointment cache");
-                delete _aptCache;
-                _aptCache = aptCache;
-                _calChecksum = parser.checksum();
-                releaseBufferLock("installed new appointment cache");
-
-                // Update other attributes that will trigger update signals
-                if (name() != parser.name())
-                    setName(parser.name());
-                setStatus(Online);
-
-                // Send out our first batch of notifications
+            if (status() == Online) {
+                // This will re-enable the timer and, if the cache was repopulated,
+                // trigger the first batch of notifications.
                 sendNotifications();
             }
         }

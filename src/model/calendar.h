@@ -2,6 +2,7 @@
 #define CALENDAR_H
 
 #include "logger.h"
+#include "icsparser.h"
 #include "httpdownloader.h"
 #include <QUrl>
 #include <QColor>
@@ -100,6 +101,9 @@ private slots:
     void sendNotifications_Reminders();
 private:
     static const char* CLASSNAME;
+
+    /** [THREAD-SAFE] Repopulates the appointment cache with data from an ICSParser. */
+    void repopulateCache(const ICSParser& parser);
 
     /** [THREAD-SAFE] Getter for the calendar checksum. */
     int calChecksum();
