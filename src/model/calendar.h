@@ -172,10 +172,10 @@ signals:
     void nameChanged(Calendar*);
 
     /** Broadcasts new ongoing appointments at semi-regular intervals. */
-    void newOngoingAppointments(Calendar*, const QLinkedList<Appointment>&);
+    void newOngoingAppointments(Calendar*, const QList<Appointment>&);
 
     /** Broadcasts reminders at semi-regular intervals. */
-    void newReminders(Calendar*, const QLinkedList<Appointment>&);
+    void newReminders(Calendar*, const QList<Appointment>&);
 };
 
 Q_DECLARE_METATYPE(Calendar*)

@@ -23,7 +23,9 @@ SOURCES += main.cpp\
     model/logger.cpp \
     model/aptcache.cpp \
     model/httpdownloader.cpp \
-    model/icsparser.cpp
+    model/icsparser.cpp \
+    view/toaster/aptbundle.cpp \
+    view/toaster/aptdisplaywidget.cpp
 
 HEADERS  += \
     model/appointment.h \
@@ -38,7 +40,9 @@ HEADERS  += \
     model/logger.h \
     model/aptcache.h \
     model/httpdownloader.h \
-    model/icsparser.h
+    model/icsparser.h \
+    view/toaster/aptbundle.h \
+    view/toaster/aptdisplaywidget.h
 
 RESOURCES += \
     resources.qrc

@@ -70,13 +70,6 @@ void CalendarDBView::setupGUI()
     _trayIcon.setContextMenu(&_trayMenu);
 }
 
-void CalendarDBView::createAptListToaster(Calendar* cal, const QString &title, const QLinkedList<Appointment> &list)
-{
-    Logger::instance()->add(CLASSNAME, "Creating toaster " + title + " for calendar" + cal->name() + "...");
-    Toaster* toast = new Toaster(title, new AppointmentList(cal, list));
-    _tm.add(toast);
-}
-
 void CalendarDBView::updateCalendarLabel(Calendar *cal)
 {
     QString statusName;
@@ -129,8 +122,8 @@ void CalendarDBView::refreshCalUpdateStatus()
 void CalendarDBView::registerCalendar(Calendar* cal)
 {
     connect(cal, SIGNAL(nameChanged(Calendar*)), this, SLOT(processCalendarNameChange(Calendar*)));
-    connect(cal, SIGNAL(newOngoingAppointments(Calendar*,QLinkedList<Appointment>)), this, SLOT(processNewOngoingAptEvents(Calendar*,QLinkedList<Appointment>)));
-    connect(cal, SIGNAL(newReminders(Calendar*,QLinkedList<Appointment>)), this, SLOT(processReminders(Calendar*,QLinkedList<Appointment>)));
+    connect(cal, SIGNAL(newOngoingAppointments(Calendar*,QList<Appointment>)), this, SLOT(processNewOngoingAptEvents(Calendar*,QList<Appointment>)));
+    connect(cal, SIGNAL(newReminders(Calendar*,QList<Appointment>)), this, SLOT(processReminders(Calendar*,QList<Appointment>)));
     connect(cal, SIGNAL(formatNotRecognized(Calendar*)), this, SLOT(showInvalidCalendarFormatError(Calendar*)));
     connect(cal, SIGNAL(statusChanged(Calendar*)), this, SLOT(processCalendarStatusChange(Calendar*)));
 
@@ -196,12 +189,12 @@ void CalendarDBView::unregisterCalendar(Calendar* cal)
     refreshCalUpdateStatus();
 }
 
-void CalendarDBView::processNewOngoingAptEvents(Calendar *cal, const QLinkedList<Appointment> &list) {
-    createAptListToaster(cal, "Now in progress", list);
+void CalendarDBView::processNewOngoingAptEvents(Calendar *cal, const QList<Appointment>& list) {
+    _tm.addToQueue(cal, "Now in progress", list);
 }
 
-void CalendarDBView::processReminders(Calendar *cal, const QLinkedList<Appointment>& list) {
-    createAptListToaster(cal, "Event reminder", list);
+void CalendarDBView::processReminders(Calendar *cal, const QList<Appointment>& list) {
+    _tm.addToQueue(cal, "Event reminder", list);
 }
 
 void CalendarDBView::showInvalidCalendarFormatError(Calendar* cal) {

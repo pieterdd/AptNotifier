@@ -73,7 +73,7 @@ void Calendar::sendNotifications_Ongoing()
 {
     // Update the list of ongoing appointments
     engageBufferLock("updating ongoing appointment list");
-    QLinkedList<Appointment> newOngoing = _aptCache->updateOngoingApts();
+    QList<Appointment> newOngoing = _aptCache->updateOngoingApts();
     releaseBufferLock("updated ongoing appointment list");
 
     // Broadcast new ongoing appointments to observers
@@ -90,7 +90,7 @@ void Calendar::sendNotifications_Reminders()
 
     // Get the list of reminders that are dated at this minute and
     // erase them from reminder storage
-    QLinkedList<Appointment> reminders;
+    QList<Appointment> reminders;
     engageBufferLock("accessing/updating reminders list");
     QMap<QDateTime, Appointment>::iterator it = _aptCache->reminders()->find(now);
 

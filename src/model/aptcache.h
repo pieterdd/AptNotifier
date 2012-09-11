@@ -21,17 +21,17 @@ public:
     // Getters
     QMultiMap<QDateTime, Appointment>* appointments() { return &_appointments; }
     QMultiMap<QDateTime, Appointment>* reminders() { return &_reminders; }
-    QLinkedList<Appointment>* ongoingApts() { return &_ongoingApts; }
+    QList<Appointment>* ongoingApts() { return &_ongoingApts; }
 
     /** Updates the list of ongoing appointments for the current timestamp. Returns a list
       * of newly ongoing appointments. */
-    QLinkedList<Appointment> updateOngoingApts();
+    QList<Appointment> updateOngoingApts();
 private:
     /** [HELPER] Removes ongoing appointments that have expired. */
-    void updateOngoingApts_RemoveExpired(QLinkedList<Appointment>& allOngoing, const QDateTime& now);
+    void updateOngoingApts_RemoveExpired(QList<Appointment>& allOngoing, const QDateTime& now);
 
     /** [HELPER] Import newly ongoing appointments to apts and return them as a linked list. */
-    QLinkedList<Appointment> updateOngoingApts_CollectNewlyOngoing(QLinkedList<Appointment>& allOngoing, const QDateTime& now);
+    QList<Appointment> updateOngoingApts_CollectNewlyOngoing(QList<Appointment>& allOngoing, const QDateTime& now);
 
     /** Contains all appointments that aren't ongoing. Sorted on start time. */
     QMultiMap<QDateTime, Appointment> _appointments;
@@ -40,7 +40,7 @@ private:
     QMultiMap<QDateTime, Appointment> _reminders;
 
     /** Contains all ongoing appointments. */
-    QLinkedList<Appointment> _ongoingApts;
+    QList<Appointment> _ongoingApts;
 };
 
 #endif // APTCACHE_H

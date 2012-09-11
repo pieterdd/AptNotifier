@@ -33,9 +33,6 @@ private:
     /** Configures controls and connections in the GUI. */
     void setupGUI();
 
-    /** Creates a notification with a certain title and the appointments in the supplied list. */
-    void createAptListToaster(Calendar* cal, const QString& title, const QLinkedList<Appointment>& list);
-
     /** Updates the name tag of a certain calendar in the list widget. */
     void updateCalendarLabel(Calendar* cal);
 
@@ -79,10 +76,10 @@ private slots:
     void unregisterCalendar(Calendar* cal);
 
     /** Triggered when a calendar broadcasts newly ongoing events. */
-    void processNewOngoingAptEvents(Calendar* cal, const QLinkedList<Appointment>& list);
+    void processNewOngoingAptEvents(Calendar* cal, const QList<Appointment>& list);
 
     /** Triggered when a calendar broadcasts new reminders. */
-    void processReminders(Calendar* cal, const QLinkedList<Appointment>& list);
+    void processReminders(Calendar* cal, const QList<Appointment>& list);
 
     /** Shows an Invalid Calendar error for a given calendar. */
     void showInvalidCalendarFormatError(Calendar* cal);

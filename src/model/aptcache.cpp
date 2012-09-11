@@ -4,7 +4,7 @@ AptCache::AptCache()
 {
 }
 
-QLinkedList<Appointment> AptCache::updateOngoingApts() {
+QList<Appointment> AptCache::updateOngoingApts() {
     QDateTime now = QDateTime::currentDateTime();
     now = now.addSecs(-now.time().second());
 
@@ -12,13 +12,13 @@ QLinkedList<Appointment> AptCache::updateOngoingApts() {
     updateOngoingApts_RemoveExpired(_ongoingApts, now);
 
     // Collect newly ongoing appointments and transfer them to a separate list
-    QLinkedList<Appointment> newOngoing = updateOngoingApts_CollectNewlyOngoing(_ongoingApts, now);
+    QList<Appointment> newOngoing = updateOngoingApts_CollectNewlyOngoing(_ongoingApts, now);
 
     return newOngoing;
 }
 
-void AptCache::updateOngoingApts_RemoveExpired(QLinkedList<Appointment>& allOngoing, const QDateTime& now) {
-    for (QLinkedList<Appointment>::iterator it = allOngoing.begin(); it != allOngoing.end(); ++it) {
+void AptCache::updateOngoingApts_RemoveExpired(QList<Appointment> &allOngoing, const QDateTime& now) {
+    for (QList<Appointment>::iterator it = allOngoing.begin(); it != allOngoing.end(); ++it) {
         const Appointment& apt = *it;
 
         if (apt.end() < now)
@@ -26,8 +26,8 @@ void AptCache::updateOngoingApts_RemoveExpired(QLinkedList<Appointment>& allOngo
     }
 }
 
-QLinkedList<Appointment> AptCache::updateOngoingApts_CollectNewlyOngoing(QLinkedList<Appointment>& allOngoing, const QDateTime& now) {
-    QLinkedList<Appointment> newOngoing;
+QList<Appointment> AptCache::updateOngoingApts_CollectNewlyOngoing(QList<Appointment> &allOngoing, const QDateTime& now) {
+    QList<Appointment> newOngoing;
     bool foundAllNewlyOngoing = false;
 
     QMultiMap<QDateTime, Appointment>::iterator it = _appointments.begin();
