@@ -213,10 +213,8 @@ void Calendar::parseNetworkResponse(bool success, QString *data) {
             setStatus(Offline);
         } else {
             // Only repopulate the AptCache if the calendar changed
-            if (calChecksum() != parser.checksum()) {
+            if (calChecksum() != parser.checksum())
                 repopulateCache(parser);
-            }
-
             if (status() == Online) {
                 // This will re-enable the timer and, if the cache was repopulated,
                 // trigger the first batch of notifications.

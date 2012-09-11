@@ -8,6 +8,7 @@ AppointmentList::AppointmentList(Calendar* cal, const QLinkedList<Appointment>& 
 void AppointmentList::start() {
     // Activate notification cycling
     _nextAptIt = _aptList.begin();
+    _curID = 1;
     nextSlide();
     connect(&_nfyTimer, SIGNAL(timeout()), this, SLOT(nextSlide()));
     _nfyTimer.setSingleShot(true);
@@ -15,6 +16,8 @@ void AppointmentList::start() {
 }
 
 void AppointmentList::prevSlide() {
+    --_curID;
+
     // As long as this isn't the first appointment, we can cycle back.
     if (_nextAptIt == _aptList.begin())
         return;
@@ -28,6 +31,8 @@ void AppointmentList::prevSlide() {
 }
 
 void AppointmentList::nextSlide() {
+    ++_curID;
+
     // As long as we have appointments, we can advance to the next one.
     if (_nextAptIt != _aptList.end()) {
         loadAppointment(_nextAptIt);
@@ -51,12 +56,15 @@ void AppointmentList::setupGUI(Calendar* cal) {
 
     // Bottom layout
     _btnBack.setText("<");
+    _btnBack.setMaximumWidth(30);
     connect(&_btnBack, SIGNAL(clicked()), this, SLOT(prevSlide()));
     _btnNext.setText(">");
+    _btnNext.setMaximumWidth(30);
     connect(&_btnNext, SIGNAL(clicked()), this, SLOT(nextSlide()));
     _hlBottom.addSpacerItem(new QSpacerItem(1, 0, QSizePolicy::Expanding));
-    _hlBottom.addWidget(&_btnBack);
-    _hlBottom.addWidget(&_btnNext);
+    _hlBottom.addWidget(&_btnBack, 0, Qt::AlignLeft);
+    _hlBottom.addWidget(&_lblCounter, 0, Qt::AlignCenter);
+    _hlBottom.addWidget(&_btnNext, 0, Qt::AlignRight);
 
     // Main layout
     setLayout(&_vlMain);
@@ -71,12 +79,13 @@ void AppointmentList::loadAppointment(QLinkedList<Appointment>::iterator it) {
     const Appointment& apt = *it;
     QString timeStr = apt.timeString();
     _lblAppointment.setText("<b style='font-size: 16px; font-family: Arial'>" + apt.summary() + "</b><br />" + timeStr);
+    _lblCounter.setText(QString::number(_curID - 1) + "/" + QString::number(_aptList.size()));
 
     // If this item was the first in line, disable the back button
-    _btnBack.setVisible(it != _aptList.begin());
+    _btnBack.setEnabled(it != _aptList.begin());
 
     // If this item was the last in line, disable the next button
     ++it;
-    _btnNext.setVisible(it != _aptList.end());
+    _btnNext.setEnabled(it != _aptList.end());
     _nfyTimer.start();
 }

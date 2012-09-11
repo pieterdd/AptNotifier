@@ -46,6 +46,7 @@ private:
     QLabel _lblAppointment;
     QLabel _lblCalImg;
     QLabel _lblCalName;
+    QLabel _lblCounter;
     QPushButton _btnBack;
     QPushButton _btnNext;
 
@@ -55,6 +56,7 @@ private:
     // Notification cycling timer
     QTimer _nfyTimer;
     QLinkedList<Appointment>::iterator _nextAptIt;
+    int _curID;
 };
 
 #endif // APPOINTMENTLIST_H
