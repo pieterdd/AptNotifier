@@ -46,3 +46,5 @@ RESOURCES += \
 CONFIG(debug, debug|release) {
     DEFINES += DEBUG
 }
+
+win32:RC_FILE = AptNotifier.rc
