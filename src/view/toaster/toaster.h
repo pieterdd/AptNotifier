@@ -12,8 +12,8 @@
 #include <QHBoxLayout>
 #include <QLinkedList>
 
-// TODO: back button, fix margins (border?),
-// setEnabled on buttons, fix skip to 2nd appointment
+// TODO: fix skip to 2nd appointment,
+// deprecate old classes.
 
 /**
   * General purpose notification window. This class is NOT thread-safe.
@@ -36,6 +36,8 @@ public:
     static const int HEIGHT = 150;
     static const int BORDERSPACING = 10;
 private:
+    static const char* CLASSNAME;
+
     /** Hooks up all widgets. */
     void setupGUI();
 
@@ -46,11 +48,15 @@ private:
       * The accompanying title and calendar indicator are also updated. */
     void loadAppointment();
 
+    /** Returns true if a bundle with ID 'bundleID' exists *and* this bundle
+      * holds an appointment with ID 'aptID'. */
+    bool exists(int bundleID, int aptID);
+
     // Widgets and layouts
     QLabel _lblTitle;
     AptDisplayWidget _adg;
     QLabel _lblCounter;
-    QPushButton _btnBack;
+    QPushButton _btnPrev;
     QPushButton _btnNext;
     QVBoxLayout _vlMain;
     QHBoxLayout _hlBody;
@@ -63,6 +69,9 @@ private:
     int _curApt;
     int _curAptID;
 private slots:
+    /** Advances to the previous slide. If unavailable, does nothing. */
+    void prevSlide();
+
     /** Advances to the next slide. If unavailable, sends a close signal.
       * This function is also triggered whenever the slide timer times out.
       * Because of the way connect()'s AutoConnection works, thread sync
