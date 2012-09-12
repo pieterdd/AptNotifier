@@ -27,11 +27,9 @@ CalendarDBView::CalendarDBView(CalendarDB *calDB, QWidget *parent)
 }
 
 CalendarDBView::~CalendarDBView()
-{
-}
+{}
 
-void CalendarDBView::setupGUI()
-{
+void CalendarDBView::setupGUI() {
     assert(_calDB);
     connect(_calDB, SIGNAL(newCalendarAdded(Calendar*)), this, SLOT(registerCalendar(Calendar*)));
     connect(_calDB, SIGNAL(removingCalendar(Calendar*)), this, SLOT(unregisterCalendar(Calendar*)));
@@ -58,7 +56,7 @@ void CalendarDBView::setupGUI()
 
     // Tray icon
     _trayIcon.setIcon(QIcon(":/general/appointment.png"));
-    _trayIcon.setToolTip(QCoreApplication::applicationName());
+    _trayIcon.setToolTip(QCoreApplication::applicationName() + " " + QCoreApplication::applicationVersion());
     _trayIcon.show();
     QAction* showWindow = _trayMenu.addAction("Show window");
     QAction* updateAll = _trayMenu.addAction("Update all");
