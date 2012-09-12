@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
 #else
     QCoreApplication::setApplicationName("AptNotifier DEBUG");
 #endif
-    QCoreApplication::setApplicationVersion("-- Test version");
+    QCoreApplication::setApplicationVersion("v0.01");
     Logger::instance()->initialize();
 
     CalendarDB calDB;
