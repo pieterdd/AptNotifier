@@ -27,9 +27,7 @@ Although AptNotifier should be able to run on any platform with a Qt desktop imp
 License
 =======
 
-This application and its source code is provided to you for free under a [Creative Commons BY-NC 2.0 license](http://creativecommons.org/licenses/by-nc/2.0/be/deed.en). Personal and commercial use of the application are allowed. You *may* use the source code (or parts thereof) in non-commercial works, provided that you release the source code of your application.
-
-The work is provided to you as-is. Use this application and its source code at your own risk. I do not accept responsibility for any damages you or other parties may incur following your use of the work.
+See the LICENSE file for more information about the terms under which AptNotifier is licensed.
 
 Acknowledgements
 ================
