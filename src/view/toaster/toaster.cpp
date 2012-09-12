@@ -27,15 +27,10 @@ void Toaster::appendBundle(const AptBundle& bundle) {
     _lblCounter.setText(QString::number(_curAptID) + "/" + QString::number(totalApts()));
 }
 
-void Toaster::show() {
-    QDialog::show();
-    nextSlide();
-}
-
 void Toaster::setupGUI() {
     // Window setup
     setContentsMargins(0, 0, 0, 0);
-    setWindowFlags(Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
+    setWindowFlags(Qt::SplashScreen | Qt::WindowStaysOnTopHint | Qt::FramelessWindowHint);
     setAttribute(Qt::WA_ShowWithoutActivating);
     setAttribute(Qt::WA_TranslucentBackground);
     setFixedSize(WIDTH, HEIGHT);
@@ -142,7 +137,7 @@ void Toaster::prevSlide() {
 }
 
 void Toaster::nextSlide() {
-    Logger::instance()->add(CLASSNAME, this, "Loading next slide...");
+    Logger::instance()->add(CLASSNAME, this, "Loading next slide");
     _slideTimer.stop();
 
     // Send close request if no next slide is available
@@ -168,7 +163,15 @@ void Toaster::nextSlide() {
     _slideTimer.start();
 }
 
-void Toaster::paintEvent(QPaintEvent*) {
+void Toaster::paintEvent(QPaintEvent* event) {
+    QDialog::paintEvent(event);
+
     QPainter painter(this);
     painter.drawImage(0, 0, QImage(":/bg/toaster.png"));
+
+    if (_curBundle == 0 && _curApt == -1) {
+        nextSlide();
+        _slideTimer.start();
+        Logger::instance()->add(CLASSNAME, this, "Starting cycle timer");
+    }
 }

@@ -55,8 +55,7 @@ void Calendar::drawBorder(QImage &img, int thickness, const QColor &color) {
 
 void Calendar::sendNotifications()
 {
-    Logger::instance()->add(CLASSNAME, this, "Checking notifications at "
-                            + QDateTime::currentDateTime().toString("hh:mm:ss") + "...");
+    Logger::instance()->add(CLASSNAME, this, "Checking notifications...");
 
     // First get the ongoing appointment notifications out the door,
     // then process the reminders.

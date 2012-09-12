@@ -12,8 +12,7 @@
 #include <QHBoxLayout>
 #include <QLinkedList>
 
-// TODO: fix skip to 2nd appointment,
-// deprecate old classes.
+// TODO: deprecate old classes.
 
 /**
   * General purpose notification window. This class is NOT thread-safe.
@@ -28,9 +27,6 @@ public:
 
     /** Adds new appointments to this toaster. */
     void appendBundle(const AptBundle& bundle);
-
-    /** Override of the default show behavior to start the slide timer. */
-    void show();
 
     static const int WIDTH = 350;
     static const int HEIGHT = 150;
@@ -78,7 +74,7 @@ private slots:
       * is not needed. */
     void nextSlide();
 protected:
-    void paintEvent(QPaintEvent*);
+    void paintEvent(QPaintEvent* event);
 signals:
     /** Signals observers that this notification can be closed. */
     void closeRequested(Toaster*);
