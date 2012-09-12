@@ -1,7 +1,6 @@
 #include "toaster.h"
 
 #include "model/logger.h"
-#include "view/toaster/infowidget.h"
 #include <QFont>
 #include <cassert>
 #include <QPainter>

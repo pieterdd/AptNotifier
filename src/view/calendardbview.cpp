@@ -5,7 +5,6 @@
 #include "model/calendardb.h"
 #include "model/appointment.h"
 #include "view/toaster/toaster.h"
-#include "view/toaster/appointmentlist.h"
 #include <cassert>
 #include <QMetaType>
 #include <QMessageBox>

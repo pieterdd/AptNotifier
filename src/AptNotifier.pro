@@ -17,8 +17,6 @@ SOURCES += main.cpp\
     view/calendardbview.cpp \
     view/inputbox.cpp \
     view/toaster/toaster.cpp \
-    view/toaster/appointmentlist.cpp \
-    view/toaster/infowidget.cpp \
     view/toaster/toastmanager.cpp \
     model/logger.cpp \
     model/aptcache.cpp \
@@ -34,8 +32,6 @@ HEADERS  += \
     view/calendardbview.h \
     view/inputbox.h \
     view/toaster/toaster.h \
-    view/toaster/appointmentlist.h \
-    view/toaster/infowidget.h \
     view/toaster/toastmanager.h \
     model/logger.h \
     model/aptcache.h \

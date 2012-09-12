@@ -12,8 +12,6 @@
 #include <QHBoxLayout>
 #include <QLinkedList>
 
-// TODO: deprecate old classes.
-
 /**
   * General purpose notification window. This class is NOT thread-safe.
   * \author Pieter De Decker
