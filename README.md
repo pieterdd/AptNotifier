@@ -1,3 +1,5 @@
+**Update:** AptNotifier currently has a tendency to quit without notice (see ticket #20). It has proven challenging for me to track down this issue with the tools at my disposal for this C++/Qt project. This isn't the first time I'm having such difficulty tracking down subtle issues. I've decided to attempt a full rewrite of this program in C# because it appears to provide better debugging facilities. Stay tuned.
+
 Description
 ===========
 
